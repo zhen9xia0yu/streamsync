@@ -10,7 +10,7 @@ typedef struct{
     const char *filename;
     const char *ops;
     AVFormatContext *fmt_ctx;
-    AVOutputFormat *ofmt;`
+    AVOutputFormat *ofmt;
 }   fileMap;
 
 #endif

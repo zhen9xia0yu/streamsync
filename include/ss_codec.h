@@ -1,9 +1,6 @@
 #ifndef _SS_CODEC_H_
 #define _SS_CODEC_H_
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <libavcodec/avcodec.h>
 
 typedef struct

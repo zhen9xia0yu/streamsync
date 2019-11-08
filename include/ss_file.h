@@ -1,9 +1,6 @@
 #ifndef _SS_FILE_H_
 #define _SS_FILE_H_
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <libavformat/avformat.h>
 
 typedef struct{

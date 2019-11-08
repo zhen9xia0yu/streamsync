@@ -14,6 +14,7 @@ typedef struct
     int cur_index_pkt_out;
     int cur_index_frame_in;
     int cur_index_frame_out;
+    int cur_pts;
 }   streamMap;
 
 #endif

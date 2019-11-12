@@ -14,7 +14,7 @@ typedef struct
     AVFilterContext *buffersrc_ctx;
     AVFilterContext *buffersink_ctx;
     AVFilterGraph *filter_graph;
-    const char descr;
+    const char *descr;
 }   filterMap;
 
 #endif

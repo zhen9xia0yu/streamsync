@@ -168,5 +168,21 @@ int set_outputs(meetPro *meeting){
     return 0;
 }
 
+int set_decoder(AVFormatContext *ctx, int stream_id, AVCodec *codec,AVCodecContext *c){
+   codec = avcodec_find_decoder(ctx->streams[stream_id]->codec->codec_id);
+   if(!codec){
+       av_log(NULL,AV_LOG_ERROR,"could not find decodec for '%s'\n",avcodec_get_name(ctx->streams[stream_id]->codec->codec_id));
+       return -1;
+   }
+   c = avcodec_alloc_context3(codec);
+   c->thread_count=1;//????
+   avcodec_copy_context(c,ctx->streams[stream_id]->codec);
+   if(avcodec_open2(c,NULL,NULL)<0){
+       av_log(NULL,AV_LOG_ERROR,"could not open the codec '%s'\n",avcodec_get_name(ctx->streams[stream_id]->codec->codec_id));
+       return -1;
+    }else   av_log(NULL,AV_LOG_DEBUG,"seccessed open the decoder '%s'\n",avcodec_get_name(ctx->streams[stream_id]->codec->codec_id));
+   return 0;
+}
+
 
 

@@ -33,23 +33,16 @@ int main(int argc,char **argv){
     meeting->audio_individual->cur_index_pkt_in=0;
     av_dict_set(&meeting->video_main->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
     av_dict_set(&meeting->audio_individual->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
-
-    av_log(NULL,AV_LOG_DEBUG,"%s\n",meeting->video_main->input_fm->filename);
-    av_log(NULL,AV_LOG_DEBUG,"%s\n",meeting->audio_individual->input_fm->filename);
-    av_log(NULL,AV_LOG_DEBUG,"%s\n",meeting->output_main->filename);
-    
     //set input
     if((ret = set_inputs(meeting))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set inputs.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set inputs\n");
-
     //set output & encoders
    if((ret = set_outputs(meeting))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set outputs.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set outputs.\n");
-
    //set decoders
     if((ret = set_decoder(meeting->audio_individual,0))<0){
         av_log(NULL,AV_LOG_ERROR,"error occurred when open audio decodec.\n");
@@ -164,8 +157,6 @@ int main(int argc,char **argv){
         }
     }                              
     av_write_trailer(meeting->output_main->fmt_ctx);
-
-
 end:
     free_meetPro(meeting);
     free(meeting);

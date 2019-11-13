@@ -22,5 +22,11 @@ void free_streamMap(streamMap * sm){
     free_filterMap(sm->filtermap);
     av_log(NULL,AV_LOG_DEBUG,"free_streamMap.\n");
 }
+void init_packet(AVPacket *packet){
+    av_init_packet(packet);
+    packet->data=NULL;
+    packet->size=0;
+}
+
 
 

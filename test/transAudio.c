@@ -14,7 +14,7 @@ int main(int argc,char **argv){
     AVPacket vpkt,apkt,newapkt;
     if(argc!=4){
         av_log(NULL,AV_LOG_ERROR,"usage: %s <input video file> <input audio file> <output file>\n",argv[0]);
-        goto end;
+        return -1;
     }
     //init
     av_log_set_level(AV_LOG_DEBUG);

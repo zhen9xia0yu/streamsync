@@ -65,6 +65,7 @@ int main(int argc,char **argv){
 
     free_meetPro(meeting);
     free(meeting);
+    free_codecMap(meeting->audio_individual->codecmap);
 
     return 0;
 }

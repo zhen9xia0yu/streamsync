@@ -5,11 +5,11 @@ LIBPATH := -L${FFMPEG_HOME}/lib
 LIB := -lpthread -ldl -lavformat -lavcodec -lavutil -lavfilter -lpostproc -lswscale -lswresample -lx264  -lz -lrt
 SRCS := $(wildcard src/*.c test/*.c) 
 OBJS := $(patsubst %.c, %.o, $(notdir $(SRCS)))
-TARGET := structest 
+TARGET := transAudio 
 
 all : $(TARGET)
 
-structest : $(OBJS) 
+transAudio : $(OBJS) 
 	$(CC) $(CFLAGS) $(LIB) $(LIBPATH) $(INCLUDE) -o $@ $^ 
 	
 $(OBJS): $(SRCS)

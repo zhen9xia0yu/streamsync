@@ -47,11 +47,11 @@ int set_inputs(meetPro * meeting){
     return 0;
 }
 
-int add_stream(meetPro *meeting,AVCodec *codec, AVCodecContext *c,enum AVCodecID codec_id){
+int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
     int i;
     int type;
-    codec = avcodec_find_encoder(codec_id);
-    if(!codec){
+    cm->codec = avcodec_find_encoder(codec_id);
+    if(!cm->codec){
         av_log(NULL,AV_LOG_ERROR,"could not find encoder for '%s'\n",avcodec_get_name(codec_id));
         return -1;
     }else av_log(NULL,AV_LOG_DEBUG,"successed find encoder for '%s'\n",avcodec_get_name(codec_id));
@@ -60,55 +60,57 @@ int add_stream(meetPro *meeting,AVCodec *codec, AVCodecContext *c,enum AVCodecID
         av_log(NULL,AV_LOG_ERROR,"could not allocate stream\n");
         return -1;
     }else av_log(NULL,AV_LOG_DEBUG,"successed allocate stream.\n");
-    c = avcodec_alloc_context3(codec);
-    if(!c){
+    cm->codec_ctx = avcodec_alloc_context3(cm->codec);
+    if(!cm->codec_ctx){
         av_log(NULL,AV_LOG_ERROR,"could not alloc an encoding context\n");
         return -1;
     }else av_log(NULL,AV_LOG_DEBUG,"successed alloc an encoding context\n");
-    switch (codec->type) {
+    switch (cm->codec->type) {
     case AVMEDIA_TYPE_AUDIO:
-        c->sample_fmt=AV_SAMPLE_FMT_FLTP;
-        c->bit_rate=meeting->audio_individual->input_fm->fmt_ctx->streams[0]->codec->bit_rate;
-        c->sample_rate=44100;//flv:aac supported only
-        c->channel_layout=AV_CH_LAYOUT_STEREO;//flv :aac supported only, 1
-        c->channels=av_get_channel_layout_nb_channels(c->channel_layout);
-        c->time_base = (AVRational){1, c->sample_rate}; 
+        cm->codec_ctx->sample_fmt=AV_SAMPLE_FMT_FLTP;
+        cm->codec_ctx->bit_rate=meeting->audio_individual->input_fm->fmt_ctx->streams[0]->codec->bit_rate;
+        cm->codec_ctx->sample_rate=44100;//flv:aac supported only
+        cm->codec_ctx->channel_layout=AV_CH_LAYOUT_STEREO;//flv :aac supported only, 1
+        cm->codec_ctx->channels=av_get_channel_layout_nb_channels(cm->codec_ctx->channel_layout);
+        cm->codec_ctx->time_base = (AVRational){1, cm->codec_ctx->sample_rate}; 
+        
         type=1;
         break;
 
     case AVMEDIA_TYPE_VIDEO:
-        c->codec_id = codec_id;
-        c->bit_rate = 400000;
-        c->width    = 1280;
-        c->height   = 720;
-        c->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
+        cm->codec_ctx->codec_id = codec_id;
+        cm->codec_ctx->bit_rate = 400000;
+        cm->codec_ctx->width    = 1280;
+        cm->codec_ctx->height   = 720;
+        cm->codec_ctx->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
         //ofmt_ctx->streams[0]->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
-        c->framerate = (AVRational){25,1};
-        c->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
-        c->pix_fmt = STREAM_PIX_FMT;
-        if (c->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
-            c->max_b_frames = 2;
+        cm->codec_ctx->framerate = (AVRational){25,1};
+        cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
+        cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
+        if (cm->codec_ctx->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
+            cm->codec_ctx->max_b_frames = 2;
         }
-        if (c->codec_id == AV_CODEC_ID_MPEG1VIDEO) {
-            c->mb_decision = 2;
+        if (cm->codec_ctx->codec_id == AV_CODEC_ID_MPEG1VIDEO) {
+            cm->codec_ctx->mb_decision = 2;
        }
+
         type=0;
     break;
     default:
         break;
     }
-    c->codec_tag = 0;
+    cm->codec_ctx->codec_tag = 0;
     if (meeting->output_main->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-        c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER; 
-    if(avcodec_open2(c,codec,NULL)<0){
+        cm->codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER; 
+    if(avcodec_open2(cm->codec_ctx,cm->codec,NULL)<0){
         av_log(NULL,AV_LOG_ERROR,"could not open the encoder.\n");
         return -1;
     }else av_log(NULL,AV_LOG_DEBUG,"sucessed open the encoder.%d!\n",type);
-    if(avcodec_copy_context(out_stream->codec, c)<0){
+    if(avcodec_copy_context(out_stream->codec, cm->codec_ctx)<0){
         av_log(NULL,AV_LOG_ERROR,"failed to set context to out stream codec\n");
         return -1;
     }else av_log(NULL,AV_LOG_DEBUG,"sucessed copy set the coder! %d !",type);
-   if( avcodec_parameters_from_context(out_stream->codecpar,c)<0){
+   if( avcodec_parameters_from_context(out_stream->codecpar,cm->codec_ctx)<0){
        av_log(NULL,AV_LOG_ERROR,"failed to copy codec parameters.\n");
        return -1;
    }else av_log(NULL,AV_LOG_DEBUG,"sucessed copy codec parameters.%d\n",type);
@@ -145,9 +147,8 @@ int set_outputs(meetPro *meeting){
 		break;
 		}
 	}
-   if ((ret = add_stream(meeting,meeting->audio_individual->codecmap->codec,
-                        meeting->audio_individual->codecmap->codec_ctx,AUDIO_CODEC_ID)) < 0){
-       av_log(NULL,AV_LOG_ERROR,"error occured when add audio stream failed.\n");
+    if ((ret = add_stream(meeting,meeting->audio_individual->codecmap,AUDIO_CODEC_ID)) < 0){
+      av_log(NULL,AV_LOG_ERROR,"error occured when add audio stream failed.\n");
        return -1;
    }
     av_log(NULL,AV_LOG_INFO,"==========Output Information==========\n");

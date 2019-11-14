@@ -57,6 +57,7 @@ int set_inputs(meetPro * meeting){
 int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
     int i;
     int type;
+    AVStream * s=meeting->video_main->input_fm->fmt_ctx->streams[0];
     cm->codec = avcodec_find_encoder(codec_id);
     if(!cm->codec){
         av_log(NULL,AV_LOG_ERROR,"could not find encoder for '%s'\n",avcodec_get_name(codec_id));
@@ -84,6 +85,7 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
         type=1;
         break;
     case AVMEDIA_TYPE_VIDEO:
+        /*
         cm->codec_ctx->codec_id = codec_id;
         cm->codec_ctx->bit_rate = 400000;
         cm->codec_ctx->width    = 1280;
@@ -91,8 +93,19 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
         cm->codec_ctx->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
         //ofmt_ctx->streams[0]->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
         cm->codec_ctx->framerate = (AVRational){25,1};
-        cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
         cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
+        cm->codec_ctx->gop_size  = 12; */     /* emit one intra frame every twelve frames at most */
+
+        cm->codec_ctx->codec_id = codec_id;
+        cm->codec_ctx->bit_rate = s->codec->bit_rate;
+        cm->codec_ctx->width    = s->codec->width;
+        cm->codec_ctx->height   = s->codec->height;
+        cm->codec_ctx->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
+        //ofmt_ctx->streams[0]->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
+        cm->codec_ctx->framerate = (AVRational){25,1};
+        cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
+        cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
+
         if (cm->codec_ctx->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
             cm->codec_ctx->max_b_frames = 2;
         }
@@ -154,7 +167,7 @@ int set_outputs(meetPro *meeting,int trans_video){
             }
         }
     }else{
-        if ((ret = add_stream(meeting,meeting->video_main->codecmap,AUDIO_CODEC_ID)) < 0){
+        if ((ret = add_stream(meeting,meeting->video_main->codecmap,VIDEO_CODEC_ID)) < 0){
             av_log(NULL,AV_LOG_ERROR,"error occured when add audio stream failed.\n");
             return -1;
         } 

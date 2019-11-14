@@ -8,7 +8,6 @@
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 
-
 typedef struct
 {
     AVFilterContext *buffersrc_ctx;
@@ -17,4 +16,9 @@ typedef struct
     const char *descr;
 }   filterMap;
 
+void init_filterMap(filterMap * fM);
+void free_filterMap(filterMap * fM);
+int filting(AVFrame *frame,AVFrame *filt_frame,
+            AVFilterContext *buffersrc_ctx,
+            AVFilterContext *buffersink_ctx);
 #endif

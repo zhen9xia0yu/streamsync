@@ -13,4 +13,10 @@ typedef struct
     fileMap *output_overlay;
 }   meetPro;
 
+void init_meetPro(meetPro * mp);
+void free_meetPro(meetPro * mp);
+int set_inputs(meetPro * meeting);
+int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id);
+int set_outputs(meetPro *meeting);
+
 #endif

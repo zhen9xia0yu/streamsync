@@ -8,7 +8,7 @@
 #define USE_AACBSF 1
 
 int main(int argc,char **argv){
-    int ret,i,apkt_over;
+    int ret,i,apkt_over,trans_video;
     meetPro *meeting;
     AVFrame *aframe,*filt_aframe;
     AVPacket vpkt,apkt,newapkt;
@@ -39,7 +39,8 @@ int main(int argc,char **argv){
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set inputs\n");
     //set output & encoders
-   if((ret = set_outputs(meeting))<0){
+    trans_video=0;
+    if((ret = set_outputs(meeting,trans_video))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set outputs.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set outputs.\n");

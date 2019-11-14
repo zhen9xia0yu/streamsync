@@ -40,6 +40,10 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt,
                 AVFrame *frame,AVFrame *filt_frame,
                 AVFilterContext *buffersrc_ctx,AVFilterContext *buffersink_ctx, 
                 int type);
-
+int transcode_unfilt(AVPacket pkt, AVPacket *new_pkt, 
+                AVStream *in_stream,AVStream *out_stream,
+                int pkt_index,AVCodecContext *codec,
+                AVCodecContext *decodec, AVFrame *frame, 
+                int type);
 
 #endif

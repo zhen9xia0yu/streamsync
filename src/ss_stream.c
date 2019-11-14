@@ -259,3 +259,44 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
     }
 }
 
+int transcode_unfilt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream *out_stream,int pkt_index,AVCodecContext *codec,AVCodecContext *decodec, AVFrame *frame, int type){
+    int ret;
+    if(pkt.size)
+        av_packet_rescale_ts(&pkt,in_stream->time_base,in_stream->codec->time_base);
+    while(1){
+        ret = decode(decodec,pkt,frame);
+        pkt.size=0; 
+        if(!ret){
+            frame->pts = av_frame_get_best_effort_timestamp(frame);
+            switch(frame->pict_type){
+                case AV_PICTURE_TYPE_I:av_log(NULL,AV_LOG_DEBUG,"type:I frame\t\n");break;
+                case AV_PICTURE_TYPE_B:av_log(NULL,AV_LOG_DEBUG,"type:B frame\t\n");break;
+                case AV_PICTURE_TYPE_P:av_log(NULL,AV_LOG_DEBUG,"type:P frame\t\n");break;
+                default:av_log(NULL,AV_LOG_INFO,"type:other\t");break;
+            }
+            ret = encode(codec,frame,new_pkt);
+            if(ret == AVERROR_EOF) return ret;
+            else if(ret == AVERROR(EAGAIN)) continue;
+            else if(ret<0){
+                    av_log(NULL,AV_LOG_ERROR,"error occured while encode\n");
+                    return -1;
+            } 
+            else if(ret == 0 )  return 0;
+        
+        }else if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF){
+            av_log(NULL,AV_LOG_DEBUG,"did not get frame from dec\n");
+            ret = encode(codec,NULL,new_pkt);
+            if( ret == AVERROR_EOF || ret == AVERROR(EAGAIN))   return ret;
+            else if(ret<0){
+                    av_log(NULL,AV_LOG_ERROR,"error occured while encode\n");
+                    return -1;
+            } 
+            else if(ret == 0 )  return 0;
+        } 
+        else if(ret<0){
+            av_log(NULL,AV_LOG_ERROR,"error occured while decode\n");
+            return -1;
+        } 
+    }
+}
+

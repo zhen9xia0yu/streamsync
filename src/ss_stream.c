@@ -189,7 +189,8 @@ int set_pts(AVPacket *pkt,AVStream *stream, int pkt_index){
 int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,int stream_index,fileMap *fm){
     int ret;
     if(stream_index)    av_packet_rescale_ts(pkt,out_stream->codec->time_base,out_stream->time_base);
-    else   av_packet_rescale_ts(pkt,in_stream->time_base,out_stream->time_base);
+    //else   av_packet_rescale_ts(pkt,in_stream->time_base,out_stream->time_base);
+    else   av_packet_rescale_ts(pkt,out_stream->codec->time_base,out_stream->time_base);
     pkt->pos = -1;
     pkt->stream_index=stream_index;
     av_log(NULL,AV_LOG_INFO,"write 1 pkt.pts=%d pkt.dts=%d pkt.duration=%d pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);

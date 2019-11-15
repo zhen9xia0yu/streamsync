@@ -99,7 +99,7 @@ int main(int argc,char **argv){
                     }
 #endif
                     av_log(NULL,AV_LOG_INFO,"video: ");
-                    ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output_main);
+                    ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output_main,0);
                     av_packet_unref(&vpkt);
                     if(ret<0){
                         av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
@@ -131,7 +131,7 @@ int main(int argc,char **argv){
                       av_bitstream_filter_filter(aacbsfc,out_stream->codec, NULL, &newapkt.data,&newapkt.size,newapkt.data,newapkt.size,0);
 #endif
                                 av_log(NULL,AV_LOG_INFO,"audio: ");
-                                ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output_main);
+                                ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output_main,1);
                                 av_free_packet(&newapkt);
                                 av_free_packet(&apkt);
                                 apkt.size=0;

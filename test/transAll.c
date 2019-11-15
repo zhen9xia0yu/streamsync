@@ -107,7 +107,7 @@ int main(int argc,char **argv){
                                 av_bitstream_filter_filter(h264bsfc, in_stream->codec,NULL,&newvpkt.data,&newvpkt.size,newvpkt.data,newvpkt.size,0);
 #endif
                                 av_log(NULL,AV_LOG_INFO,"video: ");
-                                ret = write_pkt(&newvpkt,in_stream,out_stream,0,meeting->output_main);
+                                ret = write_pkt(&newvpkt,in_stream,out_stream,0,meeting->output_main,1);
                                 av_free_packet(&newvpkt);
                                 av_free_packet(&vpkt);
                                 vpkt.size=0;
@@ -155,7 +155,7 @@ int main(int argc,char **argv){
                       av_bitstream_filter_filter(aacbsfc,out_stream->codec, NULL, &newapkt.data,&newapkt.size,newapkt.data,newapkt.size,0);
 #endif
                                 av_log(NULL,AV_LOG_INFO,"audio: ");
-                                ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output_main);
+                                ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output_main,1);
                                 av_free_packet(&newapkt);
                                 av_free_packet(&apkt);
                                 apkt.size=0;

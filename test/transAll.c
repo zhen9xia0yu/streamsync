@@ -86,32 +86,6 @@ int main(int argc,char **argv){
             out_stream=meeting->output_main->fmt_ctx->streams[0];
             if(av_read_frame(ifmt_ctx,&vpkt)>=0){
                 do{
-                    /*
-                    ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
-                    if(ret<0){
-                        av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-                        goto end;
-                    }
-                    sm_v_main->cur_index_pkt_in++;
-                    sm_v_main->cur_pts=vpkt.pts;
-#if USE_H264BSF
-                    ret = av_bitstream_filter_filter(h264bsfc, in_stream->codec,NULL,&vpkt.data,&vpkt.size,vpkt.data,vpkt.size,0);
-                    if(ret<0)
-                    {
-                        av_log(NULL,AV_LOG_ERROR,"av_bitstream_filter_filter error\n");
-                        goto end;
-                    }
-#endif
-                    av_log(NULL,AV_LOG_INFO,"video: ");
-                    ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output_main);
-                    av_packet_unref(&vpkt);
-                    if(ret<0){
-                        av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
-                        goto end;
-                    } 
-                    break;
-                    */
-
                     if(vpkt.stream_index==0){
                         av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d\n",sm_v_main->cur_index_pkt_in);
                         vpkt_over=0;
@@ -155,6 +129,7 @@ int main(int argc,char **argv){
                         } 
                         if(vpkt_over)  break;
                     }
+                    
                 }while(av_read_frame(ifmt_ctx,&vpkt)>=0);
             }else {av_log(NULL,AV_LOG_DEBUG,"the video file is over\n");break;}
         }else{
@@ -208,10 +183,10 @@ int main(int argc,char **argv){
     }                              
     av_write_trailer(meeting->output_main->fmt_ctx);
 end:
-    free_meetPro(meeting);
-    free(meeting);
     free_codecMap(meeting->audio_individual->codecmap);
     free_codecMap(meeting->video_main->codecmap);
+    free_meetPro(meeting);
+    free(meeting);
    if (ret < 0 && ret != AVERROR_EOF & ret != AVERROR(EAGAIN)) {
         av_log(NULL,AV_LOG_ERROR, "Error occurred.\n");
         return -1;

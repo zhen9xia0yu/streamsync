@@ -33,7 +33,7 @@ int init_filters(streamMap * stream);
 int set_decoder(streamMap * sm,int stream_id);
 int set_pts(AVPacket *pkt,AVStream *stream, int pkt_index);
 int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,
-                int stream_index,fileMap *fm);
+                int stream_index,fileMap *fm,int TransOrNot);
 int transcode_filt(AVPacket pkt, AVPacket *new_pkt, 
                 AVStream *in_stream,AVStream *out_stream,
                 int pkt_index,AVCodecContext *codec,AVCodecContext *decodec, 

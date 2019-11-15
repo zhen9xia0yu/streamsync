@@ -158,9 +158,9 @@ int main(int argc,char **argv){
     }                              
     av_write_trailer(meeting->output_main->fmt_ctx);
 end:
+    free_codecMap(meeting->audio_individual->codecmap);
     free_meetPro(meeting);
     free(meeting);
-    free_codecMap(meeting->audio_individual->codecmap);
    if (ret < 0 && ret != AVERROR_EOF & ret != AVERROR(EAGAIN)) {
         av_log(NULL,AV_LOG_ERROR, "Error occurred.\n");
         return -1;

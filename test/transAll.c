@@ -8,10 +8,10 @@
 #define USE_AACBSF 1
 
 int main(int argc,char **argv){
-    int ret,i,apkt_over,trans_video;
+    int ret,i,apkt_over,vpkt_over,trans_video;
     meetPro *meeting;
-    AVFrame *aframe,*filt_aframe;
-    AVPacket vpkt,apkt,newapkt;
+    AVFrame *aframe,*filt_aframe,*vframe;
+    AVPacket vpkt,apkt,newapkt,newvpkt;
     if(argc!=4){
         av_log(NULL,AV_LOG_ERROR,"usage: %s <input video file> <input audio file> <output file>\n",argv[0]);
         return -1;
@@ -39,7 +39,7 @@ int main(int argc,char **argv){
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set inputs\n");
     //set output & encoders
-    trans_video=0;
+    trans_video=1;
     if((ret = set_outputs(meeting,trans_video))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set outputs.\n");
         goto end;
@@ -49,9 +49,10 @@ int main(int argc,char **argv){
         av_log(NULL,AV_LOG_ERROR,"error occurred when open audio decodec.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"sucessed set decoder: audio\n");
-    av_log(NULL,AV_LOG_DEBUG,"dec_a->samplerate=%d\n",meeting->audio_individual->codecmap->dec_ctx->sample_rate);
-    av_log(NULL,AV_LOG_DEBUG,"codec_a->samplerate=%d\n",meeting->audio_individual->codecmap->codec_ctx->sample_rate);
-    av_log(NULL,AV_LOG_DEBUG,"ifmt->samplerate=%d\n",meeting->audio_individual->input_fm->fmt_ctx->streams[0]->codec->sample_rate);
+    if((ret = set_decoder(meeting->video_main,0))<0){
+        av_log(NULL,AV_LOG_ERROR,"error occurred when open video decodec.\n");
+        goto end;
+    }else   av_log(NULL,AV_LOG_DEBUG,"sucessed set decoder: video\n");
     //init filters
     if(init_filters(meeting->audio_individual)<0){
         av_log(NULL,AV_LOG_ERROR,"could not init audio filter.\n");
@@ -61,7 +62,9 @@ int main(int argc,char **argv){
     init_packet(&vpkt);
     init_packet(&apkt);
     init_packet(&newapkt);
+    init_packet(&newvpkt);
     aframe = av_frame_alloc();
+    vframe = av_frame_alloc();
     filt_aframe = av_frame_alloc();
 #if USE_H264BSF
     AVBitStreamFilterContext* h264bsfc = av_bitstream_filter_init("h264_mp4toannexb");
@@ -83,29 +86,50 @@ int main(int argc,char **argv){
             out_stream=meeting->output_main->fmt_ctx->streams[0];
             if(av_read_frame(ifmt_ctx,&vpkt)>=0){
                 do{
-                    ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
-                    if(ret<0){
-                        av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-                        goto end;
-                    }
-                    sm_v_main->cur_index_pkt_in++;
-                    sm_v_main->cur_pts=vpkt.pts;
+                    if(vpkt.stream_index==0){
+                        av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d\n",sm_v_main->cur_index_pkt_in);
+                        vpkt_over=0;
+                        ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
+                        if(ret<0){
+                            av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
+                            goto end;
+                        }
+                        sm_v_main->cur_index_pkt_in++;
+                        sm_v_main->cur_pts=vpkt.pts;
+                        while(1){
+                           ret = transcode_unfilt(vpkt,&newvpkt,in_stream,out_stream,
+                                            sm_v_main->cur_index_pkt_in,
+                                            sm_v_main->codecmap->codec_ctx,
+                                            sm_v_main->codecmap->dec_ctx,
+                                            vframe,0);
+                           if(ret==0){
 #if USE_H264BSF
-                    ret = av_bitstream_filter_filter(h264bsfc, in_stream->codec,NULL,&vpkt.data,&vpkt.size,vpkt.data,vpkt.size,0);
-                    if(ret<0)
-                    {
-                        av_log(NULL,AV_LOG_ERROR,"av_bitstream_filter_filter error\n");
-                        goto end;
-                    }
+                                av_bitstream_filter_filter(h264bsfc, in_stream->codec,NULL,&newvpkt.data,&newvpkt.size,newvpkt.data,newvpkt.size,0);
 #endif
-                    av_log(NULL,AV_LOG_INFO,"video: ");
-                    ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output_main,0);
-                    av_packet_unref(&vpkt);
-                    if(ret<0){
-                        av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
-                        goto end;
-                    } 
-                    break;
+                                av_log(NULL,AV_LOG_INFO,"video: ");
+                                ret = write_pkt(&newvpkt,in_stream,out_stream,0,meeting->output_main,1);
+                                av_free_packet(&newvpkt);
+                                av_free_packet(&vpkt);
+                                vpkt.size=0;
+                                if(ret<0){
+                                    av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
+                                    goto end;
+                                }
+                            }else if(ret == AVERROR(EAGAIN)|| ret == AVERROR_EOF){
+                                if(ret == AVERROR_EOF)
+                                    av_log(NULL,AV_LOG_DEBUG,"its eof\n");
+                                if(ret == AVERROR(EAGAIN))
+                                    av_log(NULL,AV_LOG_DEBUG,"need more data\n");
+                                vpkt_over=1;
+                                break;
+                            }else if(ret<0){
+                                av_log(NULL,AV_LOG_ERROR,"error occured while transcoding v\n");
+                                goto end;
+                            }
+                        } 
+                        if(vpkt_over)  break;
+                    }
+                    
                 }while(av_read_frame(ifmt_ctx,&vpkt)>=0);
             }else {av_log(NULL,AV_LOG_DEBUG,"the video file is over\n");break;}
         }else{
@@ -160,6 +184,7 @@ int main(int argc,char **argv){
     av_write_trailer(meeting->output_main->fmt_ctx);
 end:
     free_codecMap(meeting->audio_individual->codecmap);
+    free_codecMap(meeting->video_main->codecmap);
     free_meetPro(meeting);
     free(meeting);
    if (ret < 0 && ret != AVERROR_EOF & ret != AVERROR(EAGAIN)) {

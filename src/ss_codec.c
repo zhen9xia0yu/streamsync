@@ -10,6 +10,7 @@ void init_codecMap(codecMap * cm){
 void free_codecMap(codecMap * cm){
     avcodec_free_context(&cm->codec_ctx);
     avcodec_free_context(&cm->dec_ctx);
+    av_dict_free(&cm->opts);
 }
 
 int decode(AVCodecContext *decodec, AVPacket pkt, AVFrame *frame){

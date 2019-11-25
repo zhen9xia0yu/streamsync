@@ -105,7 +105,8 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
         cm->codec_ctx->framerate = (AVRational){25,1};
         cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
         cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
-
+        if(codec_id == AV_CODEC_ID_H264)
+            av_opt_set(cm->codec_ctx->priv_data,"preset","superfast",0);
         if (cm->codec_ctx->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
             cm->codec_ctx->max_b_frames = 2;
         }

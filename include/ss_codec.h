@@ -12,6 +12,7 @@ typedef struct
     AVCodec *dec;
     AVCodecContext *codec_ctx;
     AVCodecContext *dec_ctx;
+    AVDictionary *opts;
 }   codecMap;
 
 void init_codecMap(codecMap * cm);

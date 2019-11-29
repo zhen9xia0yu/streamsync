@@ -57,6 +57,7 @@ int set_inputs(meetPro * meeting){
 int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
     int i;
     int type;
+    cm->opts=NULL;
     AVStream * s=meeting->video_main->input_fm->fmt_ctx->streams[0];
     cm->codec = avcodec_find_encoder(codec_id);
     if(!cm->codec){
@@ -105,7 +106,12 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
         cm->codec_ctx->framerate = (AVRational){25,1};
         cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
         cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
-
+        av_dict_set(&cm->opts,"minrate","2500k",0);
+        av_dict_set(&cm->opts,"b","2500k",0);
+        av_dict_set(&cm->opts,"bufsize","2500k",0);
+        av_dict_set(&cm->opts,"maxrate","2500k",0);
+        if(codec_id == AV_CODEC_ID_H264)
+            av_opt_set(cm->codec_ctx->priv_data,"preset","superfast",0);
         if (cm->codec_ctx->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
             cm->codec_ctx->max_b_frames = 2;
         }
@@ -120,7 +126,7 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
     cm->codec_ctx->codec_tag = 0;
     if (meeting->output_main->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
         cm->codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER; 
-    if(avcodec_open2(cm->codec_ctx,cm->codec,NULL)<0){
+    if(avcodec_open2(cm->codec_ctx,cm->codec,&cm->opts)<0){
         av_log(NULL,AV_LOG_ERROR,"could not open the encoder.\n");
         return -1;
     }else av_log(NULL,AV_LOG_DEBUG,"sucessed open the encoder.%d!\n",type);

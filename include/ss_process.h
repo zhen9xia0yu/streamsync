@@ -5,12 +5,9 @@
 
 typedef struct
 {
-    streamMap *video_main;
-    streamMap *video_slide;
-    streamMap *audio_individual;
-    fileMap *output_main;
-    fileMap *output_slide;
-    fileMap *output_overlay;
+    streamMap *video;
+    streamMap *audio;
+    fileMap *output;
 }   meetPro;
 
 void init_meetPro(meetPro * mp);

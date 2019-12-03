@@ -90,6 +90,13 @@ int main(int argc,char **argv){
     AVFormatContext *ifmt_ctx;
     AVStream *in_stream, *out_stream;
     streamMap *sm_v_main = meeting->video;
+    //ready to delay
+    int64_t start_time=0;
+    start_time=av_gettime();
+    AVRational time_base;
+    AVRational time_base_q = {1,AV_TIME_BASE};
+    int64_t pts_time;
+    int64_t now_time;
     //start
     while(1){
           ifmt_ctx=sm_v_main->input_fm->fmt_ctx;
@@ -114,6 +121,13 @@ int main(int argc,char **argv){
                         goto end;
                     }
 #endif
+                   //delay part
+                   time_base = ifmt_ctx->streams[0]->time_base;
+                   pts_time = av_rescale_q(vpkt.dts, time_base, time_base_q);
+                   now_time = av_gettime() - start_time;
+                   if (pts_time > now_time)
+                       av_usleep(pts_time - now_time);
+
                     av_log(NULL,AV_LOG_INFO,"video: ");
                     ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output,0);
                     av_packet_unref(&vpkt);

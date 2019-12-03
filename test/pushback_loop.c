@@ -8,10 +8,9 @@
 #define USE_AACBSF 1
 
 int main(int argc,char **argv){
-    int ret,i,apkt_over,vpkt_over,trans_video;
+    int ret,i;
     meetPro *meeting;
-    AVFrame *aframe,*filt_aframe,*vframe;
-    AVPacket vpkt,apkt,newapkt,newvpkt;
+    AVPacket vpkt;
     if(argc!=3){
         av_log(NULL,AV_LOG_ERROR,"usage: %s <input video file> rtp://?:?\n",argv[0]);
         return -1;
@@ -41,7 +40,7 @@ int main(int argc,char **argv){
     av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
     av_log(NULL,AV_LOG_INFO,"======================================\n");
     //set output
-    avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, NULL, meeting->output->filename);
+    avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "rtp", meeting->output->filename);
     if (!meeting->output->fmt_ctx) {
         av_log(NULL,AV_LOG_ERROR, "Could not create output context\n");
         goto end;

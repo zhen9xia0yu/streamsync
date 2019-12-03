@@ -8,7 +8,7 @@
 
 typedef struct{
     const char *filename;
-    const char *ops;
+    AVDictionary *ops;
     AVFormatContext *fmt_ctx;
     AVOutputFormat *ofmt;
 }   fileMap;

@@ -66,6 +66,13 @@ int main(int argc,char **argv){
     aframe = av_frame_alloc();
     vframe = av_frame_alloc();
     filt_aframe = av_frame_alloc();
+    //ready to delay
+    int64_t start_time=0;
+    start_time=av_gettime();
+    AVRational time_base;
+    AVRational time_base_q = {1,AV_TIME_BASE};
+    int64_t pts_time;
+    int64_t now_time;
 #if USE_H264BSF
     AVBitStreamFilterContext* h264bsfc = av_bitstream_filter_init("h264_mp4toannexb");
 #endif
@@ -106,6 +113,13 @@ int main(int argc,char **argv){
 #if USE_H264BSF
                                 av_bitstream_filter_filter(h264bsfc, in_stream->codec,NULL,&newvpkt.data,&newvpkt.size,newvpkt.data,newvpkt.size,0);
 #endif
+                               //delay part
+                               time_base = ifmt_ctx->streams[0]->time_base;
+                               pts_time = av_rescale_q(vpkt.dts, time_base, time_base_q);
+                               now_time = av_gettime() - start_time;
+                               if (pts_time > now_time)
+                                   av_usleep(pts_time - now_time);
+
                                 av_log(NULL,AV_LOG_INFO,"video: ");
                                 ret = write_pkt(&newvpkt,in_stream,out_stream,0,meeting->output,1);
                                 av_free_packet(&newvpkt);

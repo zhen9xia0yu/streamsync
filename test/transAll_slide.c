@@ -33,7 +33,7 @@ int main(int argc,char **argv){
     meeting->audio->cur_index_pkt_in=0;
     av_dict_set(&meeting->video->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
     av_dict_set(&meeting->audio->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
-    const char * bitrate="2500k";
+    const char * bitrate="2000k";
    //set input
     if((ret = set_inputs(meeting))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set inputs.\n");

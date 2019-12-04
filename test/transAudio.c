@@ -33,6 +33,7 @@ int main(int argc,char **argv){
     meeting->audio->cur_index_pkt_in=0;
     av_dict_set(&meeting->video->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
     av_dict_set(&meeting->audio->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
+    const char * bitrate="2500k";
     //set input
     if((ret = set_inputs(meeting))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set inputs.\n");
@@ -40,7 +41,7 @@ int main(int argc,char **argv){
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set inputs\n");
     //set output & encoders
     trans_video=0;
-    if((ret = set_outputs(meeting,trans_video))<0){
+    if((ret = set_outputs(meeting,trans_video,bitrate))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set outputs.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set outputs.\n");

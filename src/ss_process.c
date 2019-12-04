@@ -45,7 +45,7 @@ int set_inputs(meetPro * meeting){
     return 0;
 }
 
-int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
+int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id,const char *bitrate){
     int i;
     int type;
     cm->opts=NULL;
@@ -97,10 +97,10 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
         cm->codec_ctx->framerate = (AVRational){25,1};
         cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
         cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
-        av_dict_set(&cm->opts,"minrate","2500k",0);
-        av_dict_set(&cm->opts,"b","2500k",0);
-        av_dict_set(&cm->opts,"bufsize","2500k",0);
-        av_dict_set(&cm->opts,"maxrate","2500k",0);
+        av_dict_set(&cm->opts,"minrate",bitrate,0);
+        av_dict_set(&cm->opts,"b",bitrate,0);
+        av_dict_set(&cm->opts,"bufsize",bitrate,0);
+        av_dict_set(&cm->opts,"maxrate",bitrate,0);
         if(codec_id == AV_CODEC_ID_H264)
             av_opt_set(cm->codec_ctx->priv_data,"preset","superfast",0);
         if (cm->codec_ctx->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
@@ -132,7 +132,7 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id){
     return 0;
 }
 
-int set_outputs(meetPro *meeting,int trans_video){
+int set_outputs(meetPro *meeting,int trans_video,const char *bitrate){
     int ret;
     av_log(NULL,AV_LOG_DEBUG,"ofmt=%x\n",meeting->output->ofmt);
     avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "flv", meeting->output->filename);
@@ -164,12 +164,12 @@ int set_outputs(meetPro *meeting,int trans_video){
             }
         }
     }else{
-        if ((ret = add_stream(meeting,meeting->video->codecmap,VIDEO_CODEC_ID)) < 0){
+        if ((ret = add_stream(meeting,meeting->video->codecmap,VIDEO_CODEC_ID,bitrate)) < 0){
             av_log(NULL,AV_LOG_ERROR,"error occured when add video stream failed.\n");
             return -1;
         }
     }
-    if ((ret = add_stream(meeting,meeting->audio->codecmap,AUDIO_CODEC_ID)) < 0){
+    if ((ret = add_stream(meeting,meeting->audio->codecmap,AUDIO_CODEC_ID,bitrate)) < 0){
       av_log(NULL,AV_LOG_ERROR,"error occured when add audio stream failed.\n");
        return -1;
     }

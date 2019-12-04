@@ -13,7 +13,7 @@ typedef struct
 void init_meetPro(meetPro * mp);
 void free_meetPro(meetPro * mp);
 int set_inputs(meetPro * meeting);
-int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id);
-int set_outputs(meetPro *meeting, int trans_video);
+int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id,const char *bitrate);
+int set_outputs(meetPro *meeting, int trans_video,const char *bitrate);
 
 #endif

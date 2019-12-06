@@ -40,7 +40,7 @@ int main(int argc,char **argv){
     av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
     av_log(NULL,AV_LOG_INFO,"======================================\n");
     //set output
-    avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "rtp", meeting->output->filename);
+    avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "flv", meeting->output->filename);
     if (!meeting->output->fmt_ctx) {
         av_log(NULL,AV_LOG_ERROR, "Could not create output context\n");
         goto end;
@@ -97,13 +97,28 @@ int main(int argc,char **argv){
     AVRational time_base_q = {1,AV_TIME_BASE};
     int64_t pts_time;
     int64_t now_time;
+    unsigned char *buf_ptr=sm_v_main->input_fm->fmt_ctx->pb->buf_ptr;
+    unsigned char *buf_end=sm_v_main->input_fm->fmt_ctx->pb->buf_end;
+    int64_t pos=sm_v_main->input_fm->fmt_ctx->pb->pos;
+    AVIOContext *ori_pb = sm_v_main->input_fm->fmt_ctx->pb;
+    int count=0;
     //start
     while(1){
+        //if(count==4)
+         //   break;
+        count++;
           ifmt_ctx=sm_v_main->input_fm->fmt_ctx;
            in_stream=ifmt_ctx->streams[0];
            out_stream=meeting->output->fmt_ctx->streams[0];
+           const int genpts=ifmt_ctx->flags&AVFMT_FLAG_GENPTS;
+           av_log(NULL,AV_LOG_DEBUG,"genpts=%d\n",genpts);
+           ifmt_ctx->pb->buf_ptr=buf_ptr;
+           ifmt_ctx->pb->buf_end=buf_end;
+           //ifmt_ctx->pb->pos=pos;
+           ifmt_ctx->pb->eof_reached=0;
            if(av_read_frame(ifmt_ctx,&vpkt)>=0){
                do{
+                    av_log(NULL,AV_LOG_DEBUG,"buf_pos=%d\n",ifmt_ctx->pb->pos);
                    if(vpkt.stream_index==0){
                        av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d\n",sm_v_main->cur_index_pkt_in);
                     ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
@@ -125,8 +140,8 @@ int main(int argc,char **argv){
                    time_base = ifmt_ctx->streams[0]->time_base;
                    pts_time = av_rescale_q(vpkt.dts, time_base, time_base_q);
                    now_time = av_gettime() - start_time;
-                   if (pts_time > now_time)
-                       av_usleep(pts_time - now_time);
+                   //if (pts_time > now_time)
+                   //    av_usleep(pts_time - now_time);
 
                     av_log(NULL,AV_LOG_INFO,"video: ");
                     ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output,0);
@@ -135,7 +150,7 @@ int main(int argc,char **argv){
                         av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
                         goto end;
                     }
-                    break;
+                   // break;
                    }
 
                }while(av_read_frame(ifmt_ctx,&vpkt)>=0);

@@ -27,136 +27,123 @@ int main(int argc,char **argv){
     meeting->video->cur_pts=0;
     meeting->video->cur_index_pkt_in=0;
     //set input:
-    meeting->video->input_fm->fmt_ctx=NULL;
-    if ((ret = avformat_open_input(&meeting->video->input_fm->fmt_ctx, meeting->video->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
-        av_log(NULL,AV_LOG_ERROR,"Could not open input video file.\n");
-        goto end;
-    }
-    if ((ret = avformat_find_stream_info(meeting->video->input_fm->fmt_ctx, 0)) < 0) {
-        av_log(NULL,AV_LOG_ERROR, "Failed to retrieve input video stream information\n");
-        goto end;
-    }
-    av_log(NULL,AV_LOG_INFO,"===========Input Information==========\n");
-    av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
-    av_log(NULL,AV_LOG_INFO,"======================================\n");
-    //set output
-    avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "flv", meeting->output->filename);
-    if (!meeting->output->fmt_ctx) {
-        av_log(NULL,AV_LOG_ERROR, "Could not create output context\n");
-        goto end;
-    }
-    *meeting->output->ofmt = *meeting->output->fmt_ctx->oformat;
-    av_log(NULL,AV_LOG_DEBUG,"ofmt=%x\n",meeting->output->ofmt);
-    for (i = 0; i < meeting->video->input_fm->fmt_ctx->nb_streams; i++) {
-        if(meeting->video->input_fm->fmt_ctx->streams[i]->codec->codec_type==AVMEDIA_TYPE_VIDEO){
-            AVStream *in_stream = meeting->video->input_fm->fmt_ctx->streams[i];
-            AVStream *out_stream = avformat_new_stream(meeting->output->fmt_ctx, in_stream->codec->codec);
-            if (!out_stream) {
-                printf( "Failed allocating output stream\n");
-                ret = AVERROR_UNKNOWN;
-                goto end;
-            }
-            if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
-                printf( "Failed to copy context from input to output stream codec context\n");
-                goto end;
-            }
-            out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
-            if (meeting->output->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-                out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
-            break;
-        }
-    }
-    av_log(NULL,AV_LOG_INFO,"==========Output Information==========\n");
-    av_dump_format(meeting->output->fmt_ctx, 0, meeting->output->filename, 1);
-    av_log(NULL,AV_LOG_INFO,"======================================\n");
-    //Open output file
-    if (!(meeting->output->ofmt->flags & AVFMT_NOFILE)) {
-        if (avio_open(&meeting->output->fmt_ctx->pb, meeting->output->filename, AVIO_FLAG_WRITE) < 0) {
-            av_log(NULL,AV_LOG_ERROR, "Could not open output file '%s'", meeting->output->filename);
+    while(1){
+        meeting->video->input_fm->fmt_ctx=null;
+        if ((ret = avformat_open_input(&meeting->video->input_fm->fmt_ctx, meeting->video->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
+            av_log(null,av_log_error,"could not open input video file.\n");
             goto end;
         }
-    }
-    //Write file header
-    if (avformat_write_header(meeting->output->fmt_ctx, NULL) < 0) {
-        av_log(NULL,AV_LOG_ERROR, "could not write the header to output.\n");
-        goto end;
-    }
-   //init packets
-    init_packet(&vpkt);
-#if USE_H264BSF
-    AVBitStreamFilterContext* h264bsfc = av_bitstream_filter_init("h264_mp4toannexb");
+        if ((ret = avformat_find_stream_info(meeting->video->input_fm->fmt_ctx, 0)) < 0) {
+            av_log(null,av_log_error, "failed to retrieve input video stream information\n");
+            goto end;
+        }
+        av_log(null,av_log_info,"===========input information==========\n");
+        av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
+        av_log(null,av_log_info,"======================================\n");
+        //set output
+        avformat_alloc_output_context2(&meeting->output->fmt_ctx, null, "flv", meeting->output->filename);
+        if (!meeting->output->fmt_ctx) {
+            av_log(null,av_log_error, "could not create output context\n");
+            goto end;
+        }
+        *meeting->output->ofmt = *meeting->output->fmt_ctx->oformat;
+        av_log(null,av_log_debug,"ofmt=%x\n",meeting->output->ofmt);
+        for (i = 0; i < meeting->video->input_fm->fmt_ctx->nb_streams; i++) {
+            if(meeting->video->input_fm->fmt_ctx->streams[i]->codec->codec_type==avmedia_type_video){
+                avstream *in_stream = meeting->video->input_fm->fmt_ctx->streams[i];
+                avstream *out_stream = avformat_new_stream(meeting->output->fmt_ctx, in_stream->codec->codec);
+                if (!out_stream) {
+                    printf( "failed allocating output stream\n");
+                    ret = averror_unknown;
+                    goto end;
+                }
+                if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
+                    printf( "failed to copy context from input to output stream codec context\n");
+                    goto end;
+                }
+                out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
+                if (meeting->output->fmt_ctx->oformat->flags & avfmt_globalheader)
+                    out_stream->codec->flags |= codec_flag_global_header;
+                break;
+            }
+        }
+        av_log(null,av_log_info,"==========output information==========\n");
+        av_dump_format(meeting->output->fmt_ctx, 0, meeting->output->filename, 1);
+        av_log(null,av_log_info,"======================================\n");
+        //open output file
+        if (!(meeting->output->ofmt->flags & avfmt_nofile)) {
+            if (avio_open(&meeting->output->fmt_ctx->pb, meeting->output->filename, avio_flag_write) < 0) {
+                av_log(null,av_log_error, "could not open output file '%s'", meeting->output->filename);
+                goto end;
+            }
+        }
+        //write file header
+        if (avformat_write_header(meeting->output->fmt_ctx, null) < 0) {
+            av_log(null,av_log_error, "could not write the header to output.\n");
+            goto end;
+        }
+       //init packets
+        init_packet(&vpkt);
+#if use_h264bsf
+        avbitstreamfiltercontext* h264bsfc = av_bitstream_filter_init("h264_mp4toannexb");
 #endif
-    //ready to syncing streams
-    AVFormatContext *ifmt_ctx;
-    AVStream *in_stream, *out_stream;
-    streamMap *sm_v_main = meeting->video;
-    //ready to delay
-    int64_t start_time=0;
-    start_time=av_gettime();
-    AVRational time_base;
-    AVRational time_base_q = {1,AV_TIME_BASE};
-    int64_t pts_time;
-    int64_t now_time;
-    unsigned char *buf_ptr=sm_v_main->input_fm->fmt_ctx->pb->buf_ptr;
-    unsigned char *buf_end=sm_v_main->input_fm->fmt_ctx->pb->buf_end;
-    int64_t pos=sm_v_main->input_fm->fmt_ctx->pb->pos;
-    AVIOContext *ori_pb = sm_v_main->input_fm->fmt_ctx->pb;
-    int count=0;
-    //start
-    while(1){
-        //if(count==4)
-         //   break;
-        count++;
-          ifmt_ctx=sm_v_main->input_fm->fmt_ctx;
-           in_stream=ifmt_ctx->streams[0];
-           out_stream=meeting->output->fmt_ctx->streams[0];
-           const int genpts=ifmt_ctx->flags&AVFMT_FLAG_GENPTS;
-           av_log(NULL,AV_LOG_DEBUG,"genpts=%d\n",genpts);
-           ifmt_ctx->pb->buf_ptr=buf_ptr;
-           ifmt_ctx->pb->buf_end=buf_end;
-           //ifmt_ctx->pb->pos=pos;
-           ifmt_ctx->pb->eof_reached=0;
-           if(av_read_frame(ifmt_ctx,&vpkt)>=0){
-               do{
-                    av_log(NULL,AV_LOG_DEBUG,"buf_pos=%d\n",ifmt_ctx->pb->pos);
-                   if(vpkt.stream_index==0){
-                       av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d\n",sm_v_main->cur_index_pkt_in);
-                    ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
-                    if(ret<0){
-                        av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-                        goto end;
-                    }
-                    sm_v_main->cur_index_pkt_in++;
-                    sm_v_main->cur_pts=vpkt.pts;
-#if USE_H264BSF
-                    ret = av_bitstream_filter_filter(h264bsfc, in_stream->codec,NULL,&vpkt.data,&vpkt.size,vpkt.data,vpkt.size,0);
-                    if(ret<0)
-                    {
-                        av_log(NULL,AV_LOG_ERROR,"av_bitstream_filter_filter error\n");
-                        goto end;
-                    }
+        //ready to syncing streams
+        avformatcontext *ifmt_ctx;
+        avstream *in_stream, *out_stream;
+        streammap *sm_v_main = meeting->video;
+        //ready to delay
+        int64_t start_time=0;
+        start_time=av_gettime();
+        avrational time_base;
+        avrational time_base_q = {1,av_time_base};
+        int64_t pts_time;
+        int64_t now_time;
+        //start
+        while(1){
+              ifmt_ctx=sm_v_main->input_fm->fmt_ctx;
+               in_stream=ifmt_ctx->streams[0];
+               out_stream=meeting->output->fmt_ctx->streams[0];
+               if(av_read_frame(ifmt_ctx,&vpkt)>=0){
+                   do{
+                       if(vpkt.stream_index==0){
+                           av_log(null,av_log_debug,"the vpkt_index:%d\n",sm_v_main->cur_index_pkt_in);
+                        ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
+                        if(ret<0){
+                            av_log(null,av_log_error,"could not set pts\n");
+                            goto end;
+                        }
+                        sm_v_main->cur_index_pkt_in++;
+                        sm_v_main->cur_pts=vpkt.pts;
+#if use_h264bsf
+                        ret = av_bitstream_filter_filter(h264bsfc, in_stream->codec,null,&vpkt.data,&vpkt.size,vpkt.data,vpkt.size,0);
+                        if(ret<0)
+                        {
+                            av_log(null,av_log_error,"av_bitstream_filter_filter error\n");
+                            goto end;
+                        }
 #endif
-                   //delay part
-                   time_base = ifmt_ctx->streams[0]->time_base;
-                   pts_time = av_rescale_q(vpkt.dts, time_base, time_base_q);
-                   now_time = av_gettime() - start_time;
-                   //if (pts_time > now_time)
-                   //    av_usleep(pts_time - now_time);
+                       //delay part
+                       time_base = ifmt_ctx->streams[0]->time_base;
+                       pts_time = av_rescale_q(vpkt.dts, time_base, time_base_q);
+                       now_time = av_gettime() - start_time;
+        //               if (pts_time > now_time)
+        //                   av_usleep(pts_time - now_time);
 
-                    av_log(NULL,AV_LOG_INFO,"video: ");
-                    ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output,0);
-                    av_packet_unref(&vpkt);
-                    if(ret<0){
-                        av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
-                        goto end;
-                    }
-                   // break;
-                   }
+                        av_log(null,av_log_info,"video: ");
+                        ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output,0);
+                        av_packet_unref(&vpkt);
+                        if(ret<0){
+                            av_log(null,av_log_error,"error occured while write 1 vpkt\n");
+                            goto end;
+                        }
+                        break;
+                       }
 
-               }while(av_read_frame(ifmt_ctx,&vpkt)>=0);
-           }else {av_log(NULL,AV_LOG_DEBUG,"the video file is over\n");break;}
-   }
-   av_write_trailer(meeting->output->fmt_ctx);
+                   }while(av_read_frame(ifmt_ctx,&vpkt)>=0);
+               }else {av_log(null,av_log_debug,"the video file is over\n");break;}
+       }
+       av_write_trailer(meeting->output->fmt_ctx);
+    }
 end:
     free_meetPro(meeting);
     free(meeting);

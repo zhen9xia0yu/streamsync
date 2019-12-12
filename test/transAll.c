@@ -32,7 +32,9 @@ int main(int argc,char **argv){
     meeting->audio->cur_pts=0;
     meeting->audio->cur_index_pkt_in=0;
     av_dict_set(&meeting->video->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
+    //av_dict_set(&meeting->video->input_fm->ops,"use_wallclock_as_timestamps","1",0);
     av_dict_set(&meeting->audio->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
+    //av_dict_set(&meeting->audio->input_fm->ops,"use_wallclock_as_timestamps","1",0);
     const char * bitrate="2500k";
    //set input
     if((ret = set_inputs(meeting))<0){
@@ -85,6 +87,7 @@ int main(int argc,char **argv){
     AVStream *in_stream, *out_stream;
     streamMap *sm_v_main = meeting->video;
     streamMap *sm_a = meeting->audio;
+    double rt_bitrate;
     //start
     while(1){
         if(av_compare_ts(sm_v_main->cur_pts, sm_v_main->input_fm->fmt_ctx->streams[0]->time_base,
@@ -122,6 +125,8 @@ int main(int argc,char **argv){
                                    av_usleep(pts_time - now_time);
 
                                 av_log(NULL,AV_LOG_INFO,"video: ");
+                                rt_bitrate = (newvpkt.size *8)/av_q2d(sm_v_main->codecmap->dec_ctx->time_base)/1000.0;
+                                av_log(NULL,AV_LOG_INFO,"bitrate= %7.1fkbits/s\n",rt_bitrate);
                                 ret = write_pkt(&newvpkt,in_stream,out_stream,0,meeting->output,1);
                                 av_free_packet(&newvpkt);
                                 av_free_packet(&vpkt);
@@ -170,6 +175,8 @@ int main(int argc,char **argv){
                       av_bitstream_filter_filter(aacbsfc,out_stream->codec, NULL, &newapkt.data,&newapkt.size,newapkt.data,newapkt.size,0);
 #endif
                                 av_log(NULL,AV_LOG_INFO,"audio: ");
+                                rt_bitrate = (newapkt.size *8)/av_q2d(sm_a->codecmap->dec_ctx->time_base)/1000.0;
+                                av_log(NULL,AV_LOG_INFO,"bitrate= %7.1fkbits/s\n",rt_bitrate);
                                 ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output,1);
                                 av_free_packet(&newapkt);
                                 av_free_packet(&apkt);

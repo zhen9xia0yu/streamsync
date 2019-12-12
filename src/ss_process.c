@@ -101,6 +101,9 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id,const char 
         av_dict_set(&cm->opts,"b",bitrate,0);
         av_dict_set(&cm->opts,"bufsize",bitrate,0);
         av_dict_set(&cm->opts,"maxrate",bitrate,0);
+        av_dict_set(&cm->opts,"profile","baseline",0);
+        av_dict_set(&cm->opts,"level","3",0);
+        av_dict_set(&cm->opts,"strict","2",0);
         if(codec_id == AV_CODEC_ID_H264)
             av_opt_set(cm->codec_ctx->priv_data,"preset","superfast",0);
         if (cm->codec_ctx->codec_id == AV_CODEC_ID_MPEG2VIDEO) {

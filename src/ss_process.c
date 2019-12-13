@@ -73,7 +73,7 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id,const char 
         cm->codec_ctx->channel_layout=AV_CH_LAYOUT_STEREO;//flv :aac supported only, 1
         cm->codec_ctx->channels=av_get_channel_layout_nb_channels(cm->codec_ctx->channel_layout);
         cm->codec_ctx->time_base = (AVRational){1, cm->codec_ctx->sample_rate};
-
+        meeting->output->fmt_ctx->streams[1]->time_base=cm->codec_ctx->time_base;
         type=1;
         break;
     case AVMEDIA_TYPE_VIDEO:
@@ -94,6 +94,7 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id,const char 
         cm->codec_ctx->height   = s->codec->height;
         //meeting->output->fmt_ctx->streams[0]->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
         cm->codec_ctx->time_base = s->codec->time_base;
+        meeting->output->fmt_ctx->streams[0]->time_base=cm->codec_ctx->time_base;
         cm->codec_ctx->framerate = (AVRational){25,1};
         cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
         cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */

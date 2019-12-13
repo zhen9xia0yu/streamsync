@@ -101,11 +101,13 @@ int main(int argc,char **argv){
                         av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d",sm_v_main->cur_index_pkt_in);
                         av_log(NULL,AV_LOG_DEBUG,"recev vpkt->pts = %"PRId64" \n",vpkt.pts);
                         vpkt_over=0;
-                        ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
-                        av_log(NULL,AV_LOG_DEBUG,"after set vpkt->pts = %"PRId64" \n",vpkt.pts);
-                        if(ret<0){
-                            av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-                            goto end;
+                        if(vpkt.pts == AV_NOPTS_VALUE){
+                            ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
+                            av_log(NULL,AV_LOG_DEBUG,"after set vpkt->pts = %"PRId64" \n",vpkt.pts);
+                            if(ret<0){
+                                av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
+                                goto end;
+                            }
                         }
                         sm_v_main->cur_index_pkt_in++;
                         sm_v_main->cur_pts=vpkt.pts;

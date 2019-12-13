@@ -98,9 +98,11 @@ int main(int argc,char **argv){
             if(av_read_frame(ifmt_ctx,&vpkt)>=0){
                 do{
                     if(vpkt.stream_index==0){
-                        av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d\n",sm_v_main->cur_index_pkt_in);
+                        av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d",sm_v_main->cur_index_pkt_in);
+                        av_log(NULL,AV_LOG_DEBUG,"recev vpkt->pts = %"PRId64" \n",vpkt.pts);
                         vpkt_over=0;
                         ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
+                        av_log(NULL,AV_LOG_DEBUG,"after set vpkt->pts = %"PRId64" \n",vpkt.pts);
                         if(ret<0){
                             av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
                             goto end;
@@ -159,7 +161,8 @@ int main(int argc,char **argv){
             if(av_read_frame(ifmt_ctx,&apkt)>=0){
                 do{
                     if(apkt.stream_index==0){
-                        av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d\n",sm_a->cur_index_pkt_in);
+                        av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d ",sm_a->cur_index_pkt_in);
+                        av_log(NULL,AV_LOG_DEBUG,"recev apkt->pts = %"PRId64" \n",apkt.pts);
                         apkt_over=0;
                         sm_a->cur_index_pkt_in++;
                         sm_a->cur_pts=apkt.pts;

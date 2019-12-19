@@ -88,6 +88,9 @@ int main(int argc,char **argv){
     streamMap *sm_v_main = meeting->video;
     streamMap *sm_a = meeting->audio;
     double rt_bitrate;
+
+    av_log(NULL,AV_LOG_DEBUG,"video timebase:%d/%d,audio timebase:%d/%d\n",sm_v_main->input_fm->fmt_ctx->streams[0]->time_base.num,sm_v_main->input_fm->fmt_ctx->streams[0]->time_base.den,sm_a->input_fm->fmt_ctx->streams[0]->time_base.num,sm_a->input_fm->fmt_ctx->streams[0]->time_base.den);
+    AVRational tb_test;
     //start
     while(1){
         if(av_compare_ts(sm_v_main->cur_pts, sm_v_main->input_fm->fmt_ctx->streams[0]->time_base,
@@ -95,11 +98,13 @@ int main(int argc,char **argv){
             ifmt_ctx=sm_v_main->input_fm->fmt_ctx;
             in_stream=ifmt_ctx->streams[0];
             out_stream=meeting->output->fmt_ctx->streams[0];
+            tb_test=sm_v_main->input_fm->fmt_ctx->streams[0]->time_base;
             if(av_read_frame(ifmt_ctx,&vpkt)>=0){
                 do{
                     if(vpkt.stream_index==0){
-                        av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d",sm_v_main->cur_index_pkt_in);
-                        av_log(NULL,AV_LOG_DEBUG,"recev vpkt->pts = %"PRId64" \n",vpkt.pts);
+                        av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d ",sm_v_main->cur_index_pkt_in);
+                        av_log(NULL,AV_LOG_DEBUG,"recev vpkt->pts = %"PRId64" ",vpkt.pts);
+                        av_log(NULL,AV_LOG_DEBUG,"  pts = %lf \n",(vpkt.pts * av_q2d(sm_v_main->input_fm->fmt_ctx->streams[0]->time_base)));
                         vpkt_over=0;
                         if(vpkt.pts == AV_NOPTS_VALUE){
                             ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
@@ -164,7 +169,8 @@ int main(int argc,char **argv){
                 do{
                     if(apkt.stream_index==0){
                         av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d ",sm_a->cur_index_pkt_in);
-                        av_log(NULL,AV_LOG_DEBUG,"recev apkt->pts = %"PRId64" \n",apkt.pts);
+                        av_log(NULL,AV_LOG_DEBUG,"recev apkt->pts = %"PRId64" ",apkt.pts);
+                        av_log(NULL,AV_LOG_DEBUG,"  pts = %lf \n",apkt.pts*av_q2d(sm_a->input_fm->fmt_ctx->streams[0]->time_base));
                         apkt_over=0;
                         sm_a->cur_index_pkt_in++;
                         sm_a->cur_pts=apkt.pts;

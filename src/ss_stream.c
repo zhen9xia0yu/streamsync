@@ -192,6 +192,7 @@ int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,int stream_
     else   av_packet_rescale_ts(pkt,in_stream->time_base,out_stream->time_base);
     pkt->pos = -1;
     pkt->stream_index=stream_index;
+    av_log(NULL,AV_LOG_DEBUG,"\nfinal pktpts=%lf outstream showpts = %lf \n",pkt->pts,pkt->pts*av_q2d(out_stream->time_base));
     av_log(NULL,AV_LOG_INFO,"write 1 pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
     if (av_interleaved_write_frame(fm->fmt_ctx,pkt) < 0) {
         av_log(NULL,AV_LOG_ERROR, "Error write packet\n");
@@ -202,13 +203,21 @@ int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,int stream_
 
 int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream *out_stream,int pkt_index,AVCodecContext *codec,AVCodecContext *decodec, AVFrame *frame,AVFrame *filt_frame,AVFilterContext *buffersrc_ctx,AVFilterContext *buffersink_ctx, int type){
     int ret;
-    if(pkt.size)
+    if(pkt.size){
         av_packet_rescale_ts(&pkt,in_stream->time_base,in_stream->codec->time_base);
+        av_log(NULL,AV_LOG_DEBUG,"in transcode rescale pkt showpts = %lf \n",pkt.pts*av_q2d(in_stream->codec->time_base));
+    }
+    else{
+        av_log(NULL,AV_LOG_DEBUG,"pkt.size=0",pkt.pts*av_q2d(in_stream->codec->time_base));
+        av_log(NULL,AV_LOG_DEBUG," showpts = %d \n",pkt.pts);
+    }
     while(1){
         ret = decode(decodec,pkt,frame);
         pkt.size=0;
         if(!ret){
+            av_log(NULL,AV_LOG_DEBUG,"got frame->pts=%lf showpts = %lf ",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
             frame->pts = av_frame_get_best_effort_timestamp(frame);
+            av_log(NULL,AV_LOG_DEBUG,"after get best pts=%lf showpts = %lf \n",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
             while(1){
                 ret = filting(frame,filt_frame,buffersrc_ctx,buffersink_ctx);
                 frame=NULL;
@@ -218,6 +227,9 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
                     av_log(NULL,AV_LOG_ERROR,"error occured while filt\n");
                     return ret;
                 }
+                //av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  incodec showpts = %lf ",filt_frame->pts,filt_frame->pts*av_q2d(in_stream->codec->time_base));
+                av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  outcodec showpts = %lf \n",filt_frame->pts,filt_frame->pts*av_q2d(out_stream->codec->time_base));
+
                 ret = encode(codec,filt_frame,new_pkt);
                 if(filt_frame)
                     av_frame_unref(filt_frame);
@@ -244,6 +256,9 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
                 av_log(NULL,AV_LOG_ERROR,"error occured while filt\n");
                 return ret;
             }
+            //av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  incodec showpts = %lf ",filt_frame->pts,filt_frame->pts*av_q2d(in_stream->codec->time_base));
+            av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  outcodec showpts = %lf \n",filt_frame->pts,filt_frame->pts*av_q2d(out_stream->codec->time_base));
+
             ret = encode(codec,filt_frame,new_pkt);
             if( ret == AVERROR_EOF || ret == AVERROR(EAGAIN))   return ret;
             else if(ret<0){
@@ -261,13 +276,21 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
 
 int transcode_unfilt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream *out_stream,int pkt_index,AVCodecContext *codec,AVCodecContext *decodec, AVFrame *frame, int type){
     int ret;
-    if(pkt.size)
+    if(pkt.size){
         av_packet_rescale_ts(&pkt,in_stream->time_base,in_stream->codec->time_base);
+        av_log(NULL,AV_LOG_DEBUG,"in transcode rescale pkt showpts = %lf \n",pkt.pts*av_q2d(in_stream->codec->time_base));
+    }
+    else{
+        av_log(NULL,AV_LOG_DEBUG,"pkt.size=0",pkt.pts*av_q2d(in_stream->codec->time_base));
+        av_log(NULL,AV_LOG_DEBUG," showpts = %d \n",pkt.pts);
+    }
     while(1){
         ret = decode(decodec,pkt,frame);
         pkt.size=0;
         if(!ret){
+            av_log(NULL,AV_LOG_DEBUG,"got frame->pts=%lf showpts = %lf ",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
             frame->pts = av_frame_get_best_effort_timestamp(frame);
+            av_log(NULL,AV_LOG_DEBUG,"after get best pts=%lf showpts = %lf \n",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
             switch(frame->pict_type){
                 case AV_PICTURE_TYPE_I:av_log(NULL,AV_LOG_DEBUG,"type:I frame\t\n");break;
                 case AV_PICTURE_TYPE_B:av_log(NULL,AV_LOG_DEBUG,"type:B frame\t\n");break;

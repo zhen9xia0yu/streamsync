@@ -29,6 +29,7 @@ int main(int argc,char **argv){
     meeting->audio->filtermap->descr="aresample=44100";
     meeting->video->cur_pts=0;
     meeting->video->cur_index_pkt_in=0;
+    meeting->video->cur_index_pkt_out=0;
     meeting->audio->cur_pts=0;
     meeting->audio->cur_index_pkt_in=0;
     meeting->audio->cur_index_pkt_out=0;
@@ -138,11 +139,13 @@ int main(int argc,char **argv){
                                 av_log(NULL,AV_LOG_INFO,"video: ");
                                 rt_bitrate = (newvpkt.size *8)/av_q2d(sm_v_main->codecmap->dec_ctx->time_base)/1000.0;
                                 av_log(NULL,AV_LOG_INFO,"bitrate= %7.1fkbits/s\n",rt_bitrate);
-                                av_log(NULL,AV_LOG_DEBUG,"\nfinal vpktpts=%d incodec showpts = %lf \n",newvpkt.pts*av_q2d(in_stream->codec->time_base));
-                                av_log(NULL,AV_LOG_DEBUG,"\nfinal vpktpts=%d outcodec showpts = %lf \n",newvpkt.pts*av_q2d(out_stream->codec->time_base));
-                                av_log(NULL,AV_LOG_DEBUG,"\nfinal vpktpts=%d outstream showpts = %lf \n",newvpkt.pts*av_q2d(out_stream->time_base));
+                                //av_log(NULL,AV_LOG_DEBUG,"\nfinal vpktpts=%d incodec showpts = %lf \n",newvpkt.pts*av_q2d(in_stream->codec->time_base));
+                                av_log(NULL,AV_LOG_DEBUG,"\nfinal vpktpts=%"PRId64" outcodec showpts = %lf \n",newvpkt.pts,newvpkt.pts*av_q2d(out_stream->codec->time_base));
+                                //av_log(NULL,AV_LOG_DEBUG,"\nfinal vpktpts=%d outstream showpts = %lf \n",newvpkt.pts*av_q2d(out_stream->time_base));
 
+                                av_log(NULL,AV_LOG_DEBUG,"the vpkt_out:%d",sm_v_main->cur_index_pkt_out);
                                 ret = write_pkt(&newvpkt,in_stream,out_stream,0,meeting->output,1);
+                                sm_v_main->cur_index_pkt_out++;
                                 av_free_packet(&newvpkt);
                                 av_free_packet(&vpkt);
                                 vpkt.size=0;
@@ -195,14 +198,18 @@ int main(int argc,char **argv){
                                 rt_bitrate = (newapkt.size *8)/av_q2d(sm_a->codecmap->dec_ctx->time_base)/1000.0;
                                 av_log(NULL,AV_LOG_INFO,"bitrate= %7.1fkbits/s\n",rt_bitrate);
                                 //av_log(NULL,AV_LOG_DEBUG,"\nfinal apktpts=%d incodec showpts = %lf \n",newapkt.pts*av_q2d(in_stream->codec->time_base));
-                                av_log(NULL,AV_LOG_DEBUG,"\nfinal apktpts=%d outcodec showpts = %lf \n",newapkt.pts*av_q2d(out_stream->codec->time_base));
+                                //cur_out_apkt_pts=newapkt.pts;
+                                //cur_out_apkt_pts+=0.023;
+                                //newapkt.pts+=1024;
+                                newapkt.dts = newapkt.pts;
+                                av_log(NULL,AV_LOG_DEBUG,"\nfinal apktpts=%"PRId64" outcodec showpts = %lf size=%d\n",newapkt.pts,newapkt.pts*av_q2d(out_stream->codec->time_base),newapkt.size);
                                 //av_log(NULL,AV_LOG_DEBUG,"\nfinal apktpts=%d outstream showpts = %lf \n",newapkt.pts*av_q2d(out_stream->time_base));
                                 av_log(NULL,AV_LOG_DEBUG,"the apkt_out:%d",sm_a->cur_index_pkt_out);
                                 //newapkt.pts = (160*sm_a->cur_index_pkt_out*44100)/8000;
-                                cur_out_apkt_pts+=0.02;
-                                av_log(NULL,AV_LOG_DEBUG,"cur_out_apkt_pts:%lf",cur_out_apkt_pts);
-                                newapkt.pts = cur_out_apkt_pts*44100;
-                                newapkt.dts = newapkt.pts;
+//                                cur_out_apkt_pts+=0.02;
+//                                av_log(NULL,AV_LOG_DEBUG,"cur_out_apkt_pts:%lf",cur_out_apkt_pts);
+//                                newapkt.pts = cur_out_apkt_pts*44100;
+//                                newapkt.dts = newapkt.pts;
                                 ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output,1);
                                 sm_a->cur_index_pkt_out++;
                                 av_free_packet(&newapkt);

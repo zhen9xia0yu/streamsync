@@ -192,7 +192,7 @@ int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,int stream_
     else   av_packet_rescale_ts(pkt,in_stream->time_base,out_stream->time_base);
     pkt->pos = -1;
     pkt->stream_index=stream_index;
-    av_log(NULL,AV_LOG_DEBUG,"\nfinal pktpts=%lf outstream showpts = %lf \n",pkt->pts,pkt->pts*av_q2d(out_stream->time_base));
+    av_log(NULL,AV_LOG_DEBUG,"\nfinal pktpts=%"PRId64" outstream showpts = %lf \n",pkt->pts,pkt->pts*av_q2d(out_stream->time_base));
     av_log(NULL,AV_LOG_INFO,"write 1 pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
     if (av_interleaved_write_frame(fm->fmt_ctx,pkt) < 0) {
         av_log(NULL,AV_LOG_ERROR, "Error write packet\n");
@@ -215,9 +215,9 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
         ret = decode(decodec,pkt,frame);
         pkt.size=0;
         if(!ret){
-            av_log(NULL,AV_LOG_DEBUG,"got frame->pts=%lf showpts = %lf ",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
+            av_log(NULL,AV_LOG_DEBUG,"got frame->pts=%"PRId64"  showpts = %lf  frame->nb_samples=%d",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base),frame->nb_samples);
             frame->pts = av_frame_get_best_effort_timestamp(frame);
-            av_log(NULL,AV_LOG_DEBUG,"after get best pts=%lf showpts = %lf \n",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
+            av_log(NULL,AV_LOG_DEBUG," after get best pts=%"PRId64" showpts = %lf \n",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
             while(1){
                 ret = filting(frame,filt_frame,buffersrc_ctx,buffersink_ctx);
                 frame=NULL;
@@ -228,7 +228,7 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
                     return ret;
                 }
                 //av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  incodec showpts = %lf ",filt_frame->pts,filt_frame->pts*av_q2d(in_stream->codec->time_base));
-                av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  outcodec showpts = %lf \n",filt_frame->pts,filt_frame->pts*av_q2d(out_stream->codec->time_base));
+                av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%"PRId64" outcodec showpts = %lf filtframe->nb_samples=%d\n",filt_frame->pts,filt_frame->pts*av_q2d(out_stream->codec->time_base),filt_frame->nb_samples);
 
                 ret = encode(codec,filt_frame,new_pkt);
                 if(filt_frame)
@@ -257,7 +257,7 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
                 return ret;
             }
             //av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  incodec showpts = %lf ",filt_frame->pts,filt_frame->pts*av_q2d(in_stream->codec->time_base));
-            av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  outcodec showpts = %lf \n",filt_frame->pts,filt_frame->pts*av_q2d(out_stream->codec->time_base));
+            av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%"PRId64"  outcodec showpts = %lf filtframe->nb_samples=%d\n",filt_frame->pts,filt_frame->pts*av_q2d(out_stream->codec->time_base),filt_frame->nb_samples);
 
             ret = encode(codec,filt_frame,new_pkt);
             if( ret == AVERROR_EOF || ret == AVERROR(EAGAIN))   return ret;

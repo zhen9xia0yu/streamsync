@@ -98,8 +98,10 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id,const char 
         cm->codec_ctx->time_base = s->codec->time_base;//原tbc
         //meeting->output->fmt_ctx->streams[0]->time_base=cm->codec_ctx->time_base;
         meeting->output->fmt_ctx->streams[0]->time_base=s->time_base;//原tbn
+        meeting->output->fmt_ctx->streams[0]->avg_frame_rate=s->avg_frame_rate;//原fps
+        meeting->output->fmt_ctx->streams[0]->r_frame_rate=s->r_frame_rate;//原tbr
         //cm->codec_ctx->framerate = (AVRational){25,1};
-        cm->codec_ctx->framerate = s->codec->framerate;//原fps
+        cm->codec_ctx->framerate = s->codec->framerate;//
         cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
         //cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
         cm->codec_ctx->gop_size  = 25;      /* emit one intra frame every twelve frames at most */

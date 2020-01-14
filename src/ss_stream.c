@@ -180,6 +180,9 @@ int set_decoder(streamMap * sm,int stream_id){
 int set_pts(AVPacket *pkt,AVStream *stream, int pkt_index){
     AVRational time_base1=stream->time_base;
     int64_t calc_duration=(double)AV_TIME_BASE/av_q2d(stream->r_frame_rate);
+    av_log(NULL,AV_LOG_DEBUG,"av_time_base:%d  \n",AV_TIME_BASE);
+    av_log(NULL,AV_LOG_DEBUG,"stream->r_frame_rate.num=%d   den=%d \n",stream->r_frame_rate.num,stream->r_frame_rate.den);
+    av_log(NULL,AV_LOG_DEBUG,"av_q2d(stream->r_frame_rate):%lf    calc_duration=%"PRId64" \n",av_q2d(stream->r_frame_rate),calc_duration);
     pkt->pts=(double)(pkt_index*calc_duration)/(double)(av_q2d(time_base1)*AV_TIME_BASE);
     pkt->dts=pkt->pts;
     pkt->duration=(double)calc_duration/(double)(av_q2d(time_base1)*AV_TIME_BASE);

@@ -26,7 +26,7 @@ int main(int argc,char **argv){
     meeting->output->filename=argv[2];
     meeting->video->cur_pts=0;
     meeting->video->cur_index_pkt_in=0;
-    while(1){
+//    while(1){
         //set input:
         meeting->video->input_fm->fmt_ctx=NULL;
         if ((ret = avformat_open_input(&meeting->video->input_fm->fmt_ctx, meeting->video->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
@@ -41,7 +41,7 @@ int main(int argc,char **argv){
         av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
         av_log(NULL,AV_LOG_INFO,"======================================\n");
         //set output
-        avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "flv", meeting->output->filename);
+        avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "rtp", meeting->output->filename);
         if (!meeting->output->fmt_ctx) {
             av_log(NULL,AV_LOG_ERROR, "Could not create output context\n");
             goto end;
@@ -108,6 +108,7 @@ int main(int argc,char **argv){
                        if(vpkt.stream_index==0){
                            av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d\n",sm_v_main->cur_index_pkt_in);
                         ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
+                        av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64" \n",vpkt.pts);
                         if(ret<0){
                             av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
                             goto end;
@@ -126,8 +127,8 @@ int main(int argc,char **argv){
                        time_base = ifmt_ctx->streams[0]->time_base;
                        pts_time = av_rescale_q(vpkt.dts, time_base, time_base_q);
                        now_time = av_gettime() - start_time;
-                   //    if (pts_time > now_time)
-                   //        av_usleep(pts_time - now_time);
+                       if (pts_time > now_time)
+                           av_usleep(pts_time - now_time);
 
                         av_log(NULL,AV_LOG_INFO,"video: ");
                         ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output,0);
@@ -143,7 +144,7 @@ int main(int argc,char **argv){
                }else {av_log(NULL,AV_LOG_DEBUG,"the video file is over\n");break;}
        }
        av_write_trailer(meeting->output->fmt_ctx);
-   }
+   //}
 end:
     free_meetPro(meeting);
     free(meeting);

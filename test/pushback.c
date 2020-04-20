@@ -6,35 +6,15 @@
 
 #define USE_H264BSF 1
 #define USE_AACBSF 1
-#define INBUF_SIZE 4096
-
 
 int main(int argc,char **argv){
     int ret,i;
     meetPro *meeting;
     AVPacket vpkt;
-
-   AVCodecParserContext * parser;
-   FILE *f;
-   AVFrame *frame;
-   uint8_t inbuf[INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
-   uint8_t *data;
-   size_t data_size;
-   AVPacket *pkt;
-   const char *filename;
-   pkt= av_packet_alloc();
-   if(!pkt)
-       goto end;
-
     if(argc!=3){
         av_log(NULL,AV_LOG_ERROR,"usage: %s <input video file> rtp://?:?\n",argv[0]);
         return -1;
     }
-    filename = argv[1];
-
-    memset(inbuf + INBUF_SIZE, 0, AV_INPUT_BUFFER_PADDING_SIZE);
-
-
     //init
     av_log_set_level(AV_LOG_DEBUG);
     av_register_all();
@@ -90,7 +70,6 @@ int main(int argc,char **argv){
         av_log(NULL,AV_LOG_INFO,"==========Output Information==========\n");
         av_dump_format(meeting->output->fmt_ctx, 0, meeting->output->filename, 1);
         av_log(NULL,AV_LOG_INFO,"======================================\n");
-                    av_log(NULL,AV_LOG_ERROR,"before open output file \n");
         //Open output file
         if (!(meeting->output->ofmt->flags & AVFMT_NOFILE)) {
             if (avio_open(&meeting->output->fmt_ctx->pb, meeting->output->filename, AVIO_FLAG_WRITE) < 0) {
@@ -99,71 +78,15 @@ int main(int argc,char **argv){
             }
         }
         //Write file header
-                    av_log(NULL,AV_LOG_ERROR,"before write header \n");
         if (avformat_write_header(meeting->output->fmt_ctx, NULL) < 0) {
             av_log(NULL,AV_LOG_ERROR, "could not write the header to output.\n");
             goto end;
         }
        //init packets
-        //init_packet(&vpkt);
-        AVFormatContext *ifmt_ctx;
-        AVStream *in_stream, *out_stream;
-        streamMap *sm_v_main = meeting->video;
-        ifmt_ctx=sm_v_main->input_fm->fmt_ctx;
-        in_stream=ifmt_ctx->streams[0];
-        out_stream=meeting->output->fmt_ctx->streams[0];
-        parser = av_parser_init(sm_v_main->input_fm->fmt_ctx->streams[0]->codec->codec_id);
-        if(!parser){
-            av_log(NULL,AV_LOG_ERROR,"parser not found\n");
-            goto end;
-        }
-
-                    av_log(NULL,AV_LOG_ERROR,"before open\n");
-        f = fopen(filename,"rb");
-        if(!f){
-            av_log(NULL,AV_LOG_ERROR,"cannot open %s\n",filename);
-        }
-
-        while(!feof(f)){
-            data_size = fread(inbuf,1,INBUF_SIZE, f);
-            if(!data_size)
-                break;
-
-            data = inbuf;
-            while(data_size>0){
-                ret =  av_parser_parse2(parser,in_stream->codec,&pkt->data,&pkt->size,
-                                        data,data_size,AV_NOPTS_VALUE,AV_NOPTS_VALUE,0);
-                if(ret < 0){
-                    av_log(NULL,AV_LOG_ERROR,"error while parsing\n");
-                    goto end;
-                }
-                data      +=ret;
-                data_size -=ret;
-
-                if(pkt->size){
-                    ret = set_pts(pkt,in_stream,sm_v_main->cur_index_pkt_in);
-                        av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64" \n",pkt->pts);
-                        if(ret<0){
-                            av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-                            goto end;
-                        }
-                        sm_v_main->cur_index_pkt_in++;
-                        sm_v_main->cur_pts=pkt->pts;
-
-                    ret = write_pkt(pkt,in_stream,out_stream,0,meeting->output,0);
-                    if(ret<0){
-                            av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
-                            goto end;
-                    }
-                }
-
-            }
-        }
-
+        init_packet(&vpkt);
 #if USE_H264BSF
         AVBitStreamFilterContext* h264bsfc = av_bitstream_filter_init("h264_mp4toannexb");
 #endif
-        /*
         //ready to syncing streams
         AVFormatContext *ifmt_ctx;
         AVStream *in_stream, *out_stream;
@@ -226,7 +149,6 @@ int main(int argc,char **argv){
        }
        av_write_trailer(meeting->output->fmt_ctx);
    //}
-   */
 end:
     free_meetPro(meeting);
     free(meeting);

@@ -12,7 +12,6 @@
 int main(int argc,char **argv){
     int ret,i;
     meetPro *meeting;
-    AVPacket vpkt;
 
    AVCodecParserContext * parser;
    FILE *f;
@@ -46,9 +45,7 @@ int main(int argc,char **argv){
     meeting->output->filename=argv[2];
     meeting->video->cur_pts=0;
     meeting->video->cur_index_pkt_in=0;
-//    while(1){
-        //set input:
-        meeting->video->input_fm->fmt_ctx=NULL;
+       meeting->video->input_fm->fmt_ctx=NULL;
         if ((ret = avformat_open_input(&meeting->video->input_fm->fmt_ctx, meeting->video->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
             av_log(NULL,AV_LOG_ERROR,"Could not open input video file.\n");
             goto end;
@@ -105,7 +102,6 @@ int main(int argc,char **argv){
             goto end;
         }
        //init packets
-        //init_packet(&vpkt);
         AVFormatContext *ifmt_ctx;
         AVStream *in_stream, *out_stream;
         streamMap *sm_v_main = meeting->video;
@@ -133,117 +129,53 @@ int main(int argc,char **argv){
         int64_t pts_time;
         int64_t now_time;
 
-        while(!feof(f)){
-            data_size = fread(inbuf,1,INBUF_SIZE, f);
-            if(!data_size)
-                break;
+        while(1){
+            rewind(f);
+            while(!feof(f)){
+                data_size = fread(inbuf,1,INBUF_SIZE, f);
+                if(!data_size)
+                    break;
 
-            data = inbuf;
-            while(data_size>0){
-                ret =  av_parser_parse2(parser,in_stream->codec,&pkt->data,&pkt->size,
-                                        data,data_size,AV_NOPTS_VALUE,AV_NOPTS_VALUE,0);
-                if(ret < 0){
-                    av_log(NULL,AV_LOG_ERROR,"error while parsing\n");
-                    goto end;
-                }
-                data      +=ret;
-                data_size -=ret;
-
-                if(pkt->size){
-                    ret = set_pts(pkt,in_stream,sm_v_main->cur_index_pkt_in);
-                        av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64" \n",pkt->pts);
-                        if(ret<0){
-                            av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-                            goto end;
-                        }
-                        sm_v_main->cur_index_pkt_in++;
-                        sm_v_main->cur_pts=pkt->pts;
-
-                       //delay part
-                       time_base = ifmt_ctx->streams[0]->time_base;
-                       pts_time = av_rescale_q(pkt->dts, time_base, time_base_q);
-                       now_time = av_gettime() - start_time;
-                       if (pts_time > now_time)
-                           av_usleep(pts_time - now_time);
-
-
-                    ret = write_pkt(pkt,in_stream,out_stream,0,meeting->output,0);
-                    if(ret<0){
-                            av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
-                            goto end;
+                data = inbuf;
+                while(data_size>0){
+                    ret =  av_parser_parse2(parser,in_stream->codec,&pkt->data,&pkt->size,
+                                            data,data_size,AV_NOPTS_VALUE,AV_NOPTS_VALUE,0);
+                    if(ret < 0){
+                        av_log(NULL,AV_LOG_ERROR,"error while parsing\n");
+                        goto end;
                     }
-                }
+                    data      +=ret;
+                    data_size -=ret;
 
+                    if(pkt->size){
+                        ret = set_pts(pkt,in_stream,sm_v_main->cur_index_pkt_in);
+                            av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64" \n",pkt->pts);
+                            if(ret<0){
+                                av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
+                                goto end;
+                            }
+                            sm_v_main->cur_index_pkt_in++;
+                            sm_v_main->cur_pts=pkt->pts;
+
+                           //delay part
+                           time_base = ifmt_ctx->streams[0]->time_base;
+                           pts_time = av_rescale_q(pkt->dts, time_base, time_base_q);
+                           now_time = av_gettime() - start_time;
+                           if (pts_time > now_time)
+                               av_usleep(pts_time - now_time);
+
+
+                        ret = write_pkt(pkt,in_stream,out_stream,0,meeting->output,0);
+                        if(ret<0){
+                                av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
+                                goto end;
+                        }
+                    }
+
+                }
             }
         }
-
-#if USE_H264BSF
-        AVBitStreamFilterContext* h264bsfc = av_bitstream_filter_init("h264_mp4toannexb");
-#endif
-        /*
-        //ready to syncing streams
-        AVFormatContext *ifmt_ctx;
-        AVStream *in_stream, *out_stream;
-        streamMap *sm_v_main = meeting->video;
-        //ready to delay
-        int64_t start_time=0;
-        start_time=av_gettime();
-        AVRational time_base;
-        AVRational time_base_q = {1,AV_TIME_BASE};
-        int64_t pts_time;
-        int64_t now_time;
-        //start
-        while(1){
-              ifmt_ctx=sm_v_main->input_fm->fmt_ctx;
-               in_stream=ifmt_ctx->streams[0];
-               out_stream=meeting->output->fmt_ctx->streams[0];
-               if(av_read_frame(ifmt_ctx,&vpkt)>=0){
-                   do{
-                       if(vpkt.stream_index==0){
-                           av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d\n",sm_v_main->cur_index_pkt_in);
-                        ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
-                        av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64" \n",vpkt.pts);
-                        if(ret<0){
-                            av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-                            goto end;
-                        }
-                        sm_v_main->cur_index_pkt_in++;
-                        sm_v_main->cur_pts=vpkt.pts;
-#if USE_H264BSF
-                        ret = av_bitstream_filter_filter(h264bsfc, in_stream->codec,NULL,&vpkt.data,&vpkt.size,vpkt.data,vpkt.size,0);
-                        if(ret<0)
-                        {
-                            av_log(NULL,AV_LOG_ERROR,"av_bitstream_filter_filter error\n");
-                            goto end;
-                        }
-#endif
-                       //delay part
-                       time_base = ifmt_ctx->streams[0]->time_base;
-                       pts_time = av_rescale_q(vpkt.dts, time_base, time_base_q);
-                       now_time = av_gettime() - start_time;
-                       if (pts_time > now_time)
-                           av_usleep(pts_time - now_time);
-
-                        av_log(NULL,AV_LOG_INFO,"video: ");
-//                        vpkt.pts=vpkt.dts=3000;
-//                        vpkt.pts=vpkt.pts/2;
-//                        vpkt.dts=vpkt.dts/2;
-//                        vpkt.duration=vpkt.duration/2;
-                        ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output,0);
-                        av_packet_unref(&vpkt);
-                        if(ret<0){
-                            av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
-                            goto end;
-                        }
-                        break;
-                       }
-
-                   }while(av_read_frame(ifmt_ctx,&vpkt)>=0);
-               }else {av_log(NULL,AV_LOG_DEBUG,"the video file is over\n");break;}
-       }
-       av_write_trailer(meeting->output->fmt_ctx);
-   //}
-   */
+        fclose(f);
 end:
     free_meetPro(meeting);
     free(meeting);

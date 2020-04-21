@@ -124,6 +124,15 @@ int main(int argc,char **argv){
             av_log(NULL,AV_LOG_ERROR,"cannot open %s\n",filename);
         }
 
+
+        //ready to delay
+        int64_t start_time=0;
+        start_time=av_gettime();
+        AVRational time_base;
+        AVRational time_base_q = {1,AV_TIME_BASE};
+        int64_t pts_time;
+        int64_t now_time;
+
         while(!feof(f)){
             data_size = fread(inbuf,1,INBUF_SIZE, f);
             if(!data_size)
@@ -149,6 +158,14 @@ int main(int argc,char **argv){
                         }
                         sm_v_main->cur_index_pkt_in++;
                         sm_v_main->cur_pts=pkt->pts;
+
+                       //delay part
+                       time_base = ifmt_ctx->streams[0]->time_base;
+                       pts_time = av_rescale_q(pkt->dts, time_base, time_base_q);
+                       now_time = av_gettime() - start_time;
+                       if (pts_time > now_time)
+                           av_usleep(pts_time - now_time);
+
 
                     ret = write_pkt(pkt,in_stream,out_stream,0,meeting->output,0);
                     if(ret<0){

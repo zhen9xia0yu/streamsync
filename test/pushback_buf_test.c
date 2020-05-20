@@ -140,39 +140,47 @@ int main(int argc,char **argv){
         data = inbuf;
         data_size=save_size;
         while(data_size>0){
-            ret =  av_parser_parse2(parser,in_stream->codec,&pkt->data,&pkt->size,
-                                    data,data_size,AV_NOPTS_VALUE,AV_NOPTS_VALUE,0);
-            if(ret < 0){
-                av_log(NULL,AV_LOG_ERROR,"error while parsing\n");
-                goto end;
-            }
-            data      +=ret;
-            data_size -=ret;
-            if(pkt->size){
-                ret = set_pts(pkt,in_stream,sm_v_main->cur_index_pkt_in);
-                av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64" \n",pkt->pts);
-                if(ret<0){
-                    av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
+            while(!pkt->size){
+                av_log(NULL,AV_LOG_INFO,"before: data_size = %zu\n",data_size);
+                ret =  av_parser_parse2(parser,in_stream->codec,&pkt->data,&pkt->size,
+                                        data,data_size,AV_NOPTS_VALUE,AV_NOPTS_VALUE,0);
+                if(ret < 0){
+                    av_log(NULL,AV_LOG_ERROR,"error while parsing\n");
                     goto end;
                 }
-                sm_v_main->cur_index_pkt_in++;
-                sm_v_main->cur_pts=pkt->pts;
-
-                //delay part
-                time_base = ifmt_ctx->streams[0]->time_base;
-                pts_time = av_rescale_q(pkt->dts, time_base, time_base_q);
-                now_time = av_gettime() - start_time;
-                if (pts_time > now_time)
-                    av_usleep(pts_time - now_time);
-
-                ret = write_pkt(pkt,in_stream,out_stream,0,meeting->output,0);
-                if(ret<0){
-                        av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
+                data      +=ret;
+                data_size -=ret;
+                av_log(NULL,AV_LOG_INFO,"after: data_size = %zu\n",data_size);
+                av_log(NULL,AV_LOG_INFO,"get: pkt->size = %d\n",pkt->size);
+                if(pkt->size){
+                    ret = set_pts(pkt,in_stream,sm_v_main->cur_index_pkt_in);
+                    av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64" \n",pkt->pts);
+                    if(ret<0){
+                        av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
                         goto end;
+                    }
+                    sm_v_main->cur_index_pkt_in++;
+                    sm_v_main->cur_pts=pkt->pts;
+
+                    //delay part
+                    time_base = ifmt_ctx->streams[0]->time_base;
+                    pts_time = av_rescale_q(pkt->dts, time_base, time_base_q);
+                    now_time = av_gettime() - start_time;
+                    if (pts_time > now_time)
+                        av_usleep(pts_time - now_time);
+
+                    ret = write_pkt(pkt,in_stream,out_stream,0,meeting->output,0);
+                    if(ret<0){
+                            av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
+                            goto end;
+                    }
+                    if(!data_size)
+                        break;
                 }
             }
         }
     }
+    av_write_trailer(meeting->output->fmt_ctx);
 end:
     free_meetPro(meeting);
     free(meeting);

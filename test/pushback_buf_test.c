@@ -173,7 +173,7 @@ int main(int argc,char **argv){
                 av_log(NULL,AV_LOG_INFO,"get: pkt->size = %d\n",pkt->size);
                 if(pkt->size){
                     ret = set_pts(pkt,in_stream,sm_v_main->cur_index_pkt_in);
-                    av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64" \n",pkt->pts);
+                    av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64"",pkt->pts);
                     if(ret<0){
                         av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
                         free_meetPro(meeting);
@@ -191,6 +191,7 @@ int main(int argc,char **argv){
                         av_usleep(pts_time - now_time);
 
                     ret = write_pkt(pkt,in_stream,out_stream,0,meeting->output,0);
+                    av_log(NULL,AV_LOG_INFO,"after write: pkt->size = %d\n\n",pkt->size);
                     if(ret<0){
                             av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
                             free_meetPro(meeting);

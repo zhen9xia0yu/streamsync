@@ -5,7 +5,6 @@
 
 #define USE_H264BSF 1
 #define USE_AACBSF 1
-//#define inbuf_size 4096
 
 int main(int argc,char **argv){
     int ret,i;
@@ -45,7 +44,9 @@ int main(int argc,char **argv){
     pkt= av_packet_alloc();
     if(!pkt){
         av_log(NULL,AV_LOG_ERROR,"cannot alloc packet.\n");
-        goto end;
+        free_meetPro(meeting);
+        free(meeting);
+        return -1;
     }
     //setting default values
     meeting->video->input_fm->filename=argv[1];
@@ -55,11 +56,15 @@ int main(int argc,char **argv){
     meeting->video->input_fm->fmt_ctx=NULL;
     if ((ret = avformat_open_input(&meeting->video->input_fm->fmt_ctx, meeting->video->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
         av_log(NULL,AV_LOG_ERROR,"Could not open input video file.\n");
-        goto end;
+        free_meetPro(meeting);
+        free(meeting);
+        return -1;
     }
     if ((ret = avformat_find_stream_info(meeting->video->input_fm->fmt_ctx, 0)) < 0) {
         av_log(NULL,AV_LOG_ERROR, "Failed to retrieve input video stream information\n");
-        goto end;
+        free_meetPro(meeting);
+        free(meeting);
+        return -1;
     }
     av_log(NULL,AV_LOG_INFO,"===========Input Information==========\n");
     av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
@@ -68,7 +73,9 @@ int main(int argc,char **argv){
     avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "rtp", meeting->output->filename);
     if (!meeting->output->fmt_ctx) {
         av_log(NULL,AV_LOG_ERROR, "Could not create output context\n");
-        goto end;
+        free_meetPro(meeting);
+        free(meeting);
+        return -1;
     }
     *meeting->output->ofmt = *meeting->output->fmt_ctx->oformat;
     av_log(NULL,AV_LOG_DEBUG,"ofmt=%x\n",meeting->output->ofmt);
@@ -79,11 +86,15 @@ int main(int argc,char **argv){
             if (!out_stream) {
                 printf( "Failed allocating output stream\n");
                 ret = AVERROR_UNKNOWN;
-                goto end;
+                free_meetPro(meeting);
+                free(meeting);
+                return -1;
             }
             if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
                 printf( "Failed to copy context from input to output stream codec context\n");
-                goto end;
+                free_meetPro(meeting);
+                free(meeting);
+                return -1;
             }
             out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
             if (meeting->output->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
@@ -98,13 +109,17 @@ int main(int argc,char **argv){
     if (!(meeting->output->ofmt->flags & AVFMT_NOFILE)) {
         if (avio_open(&meeting->output->fmt_ctx->pb, meeting->output->filename, AVIO_FLAG_WRITE) < 0) {
             av_log(NULL,AV_LOG_ERROR, "Could not open output file '%s'", meeting->output->filename);
-            goto end;
+            free_meetPro(meeting);
+            free(meeting);
+            return -1;
         }
     }
     //Write file header
     if (avformat_write_header(meeting->output->fmt_ctx, NULL) < 0) {
         av_log(NULL,AV_LOG_ERROR, "could not write the header to output.\n");
-        goto end;
+        free_meetPro(meeting);
+        free(meeting);
+        return -1;
     }
    //init
     AVFormatContext *ifmt_ctx;
@@ -116,9 +131,10 @@ int main(int argc,char **argv){
     parser = av_parser_init(sm_v_main->input_fm->fmt_ctx->streams[0]->codec->codec_id);
     if(!parser){
         av_log(NULL,AV_LOG_ERROR,"parser not found\n");
-        goto end;
+        free_meetPro(meeting);
+        free(meeting);
+        return -1;
     }
-
     //ready to delay
     int64_t start_time=0;
     start_time=av_gettime();
@@ -130,8 +146,9 @@ int main(int argc,char **argv){
     data_size = fread(inbuf,1,inbuf_size, f);
     fclose(f);
     if(!data_size){
-        ret=-1;
-        goto end;
+        free_meetPro(meeting);
+        free(meeting);
+        return -1;
     }
     save_size=data_size;
     av_log(NULL,AV_LOG_DEBUG,"file_size = %zu\n",save_size);
@@ -146,7 +163,9 @@ int main(int argc,char **argv){
                                         data,data_size,AV_NOPTS_VALUE,AV_NOPTS_VALUE,0);
                 if(ret < 0){
                     av_log(NULL,AV_LOG_ERROR,"error while parsing\n");
-                    goto end;
+                    free_meetPro(meeting);
+                    free(meeting);
+                    return -1;
                 }
                 data      +=ret;
                 data_size -=ret;
@@ -157,7 +176,9 @@ int main(int argc,char **argv){
                     av_log(NULL,AV_LOG_INFO,"set the vpkt pts:%"PRId64" \n",pkt->pts);
                     if(ret<0){
                         av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-                        goto end;
+                        free_meetPro(meeting);
+                        free(meeting);
+                        return -1;
                     }
                     sm_v_main->cur_index_pkt_in++;
                     sm_v_main->cur_pts=pkt->pts;
@@ -172,7 +193,9 @@ int main(int argc,char **argv){
                     ret = write_pkt(pkt,in_stream,out_stream,0,meeting->output,0);
                     if(ret<0){
                             av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
-                            goto end;
+                            free_meetPro(meeting);
+                            free(meeting);
+                            return -1;
                     }
                     if(!data_size)
                         break;
@@ -181,7 +204,6 @@ int main(int argc,char **argv){
         }
     }
     av_write_trailer(meeting->output->fmt_ctx);
-end:
     free_meetPro(meeting);
     free(meeting);
     if (ret < 0 && ret != AVERROR_EOF & ret != AVERROR(EAGAIN)) {

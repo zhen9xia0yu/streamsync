@@ -113,14 +113,14 @@ int main(int argc,char **argv){
                         av_log(NULL,AV_LOG_DEBUG,"recev vpkt->pts = %"PRId64" ",vpkt.pts);
                         av_log(NULL,AV_LOG_DEBUG,"  showpts = %lf \n",(vpkt.pts * av_q2d(sm_v_main->input_fm->fmt_ctx->streams[0]->time_base)));
                         vpkt_over=0;
-                        if(vpkt.pts == AV_NOPTS_VALUE){
+//                        if(vpkt.pts == AV_NOPTS_VALUE){
                             ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
                             av_log(NULL,AV_LOG_DEBUG,"after set vpkt->pts = %"PRId64" \n",vpkt.pts);
                             if(ret<0){
                                 av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
                                 goto end;
                             }
-                        }
+ //                       }
                         sm_v_main->cur_index_pkt_in++;
                         sm_v_main->cur_pts=vpkt.pts;
                         while(1){

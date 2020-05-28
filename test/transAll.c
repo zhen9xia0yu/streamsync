@@ -91,10 +91,10 @@ int main(int argc,char **argv){
     streamMap *sm_a = meeting->audio;
     double rt_bitrate;
     double cur_out_apkt_pts=0;
-    av_read_frame(sm_v_main->input_fm->fmt_ctx,&vpkt);
-    av_read_frame(sm_a->input_fm->fmt_ctx,&apkt);
-    sm_v_main->cur_pts=vpkt.pts;
-    sm_a->cur_pts=apkt.pts;
+    //av_read_frame(sm_v_main->input_fm->fmt_ctx,&vpkt);
+    //av_read_frame(sm_a->input_fm->fmt_ctx,&apkt);
+    //sm_v_main->cur_pts=vpkt.pts;
+    //sm_a->cur_pts=apkt.pts;
 
     av_log(NULL,AV_LOG_DEBUG,"video timebase:%d/%d,audio timebase:%d/%d\n",sm_v_main->input_fm->fmt_ctx->streams[0]->time_base.num,sm_v_main->input_fm->fmt_ctx->streams[0]->time_base.den,sm_a->input_fm->fmt_ctx->streams[0]->time_base.num,sm_a->input_fm->fmt_ctx->streams[0]->time_base.den);
     AVRational tb_test;

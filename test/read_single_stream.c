@@ -26,6 +26,7 @@ int main(int argc,char **argv){
     meeting->output->filename=argv[2];
     meeting->video->cur_pts=0;
     meeting->video->cur_index_pkt_in=0;
+    av_dict_set(&meeting->video->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
 //    while(1){
         //set input:
         meeting->video->input_fm->fmt_ctx=NULL;
@@ -41,7 +42,8 @@ int main(int argc,char **argv){
         av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
         av_log(NULL,AV_LOG_INFO,"======================================\n");
         //set output
-        avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "rtp", meeting->output->filename);
+        //avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "rtp", meeting->output->filename);
+        avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, NULL, meeting->output->filename);
         if (!meeting->output->fmt_ctx) {
             av_log(NULL,AV_LOG_ERROR, "Could not create output context\n");
             goto end;
@@ -127,8 +129,8 @@ int main(int argc,char **argv){
                        time_base = ifmt_ctx->streams[0]->time_base;
                        pts_time = av_rescale_q(vpkt.dts, time_base, time_base_q);
                        now_time = av_gettime() - start_time;
-                       if (pts_time > now_time)
-                           av_usleep(pts_time - now_time);
+                   //    if (pts_time > now_time)
+                   //        av_usleep(pts_time - now_time);
 
                         av_log(NULL,AV_LOG_INFO,"video: ");
 //                        vpkt.pts=vpkt.dts=3000;

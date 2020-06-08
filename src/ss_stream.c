@@ -31,12 +31,12 @@ int init_filters(streamMap * stream){
     AVFilterInOut *inputs = avfilter_inout_alloc();
     avfilter_register_all();
     switch(stream->input_fm->fmt_ctx->streams[0]->codec->codec_type){
-        case AVMEDIA_TYPE_VIDEO: 
+        case AVMEDIA_TYPE_VIDEO:
             type=0;
              if(!outputs || !inputs || !stream->filtermap->filter_graph){
                     av_log(NULL,AV_LOG_ERROR,"the inpus/ouputs/filter_graph cannot init.\n");
                     return -1;
-             } 
+             }
             AVCodecContext *dec_v_main_ctx=stream->codecmap->dec_ctx;
             AVCodecContext *codec_v_main_ctx=stream->codecmap->codec_ctx;
             buffersrc=avfilter_get_by_name("buffer");
@@ -44,11 +44,11 @@ int init_filters(streamMap * stream){
             if(!buffersrc){
                 av_log(NULL,AV_LOG_ERROR,"filtering source element not found\n");
                 return -1;
-            } 
+            }
             if(!buffersink){
                 av_log(NULL,AV_LOG_ERROR,"filtering sink element not found\n");
                 return -1;
-            } 
+            }
             snprintf(args,sizeof(args), "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
                                     dec_v_main_ctx->width,dec_v_main_ctx->height,dec_v_main_ctx->pix_fmt,
                                     dec_v_main_ctx->time_base.num,dec_v_main_ctx->time_base.den,
@@ -71,7 +71,7 @@ int init_filters(streamMap * stream){
             if(ret<0){
                 av_log(NULL,AV_LOG_ERROR,"cannot set output pixel format.\n");
                 return ret;
-            } 
+            }
             break;
         case AVMEDIA_TYPE_AUDIO:
             type = 1;
@@ -80,17 +80,17 @@ int init_filters(streamMap * stream){
              if(!outputs || !inputs || !stream->filtermap->filter_graph){
                     av_log(NULL,AV_LOG_ERROR,"the inpus/ouputs/filter_graph cannot init.\n");
                     return -1;
-             } 
+             }
             buffersrc = avfilter_get_by_name("abuffer");
             buffersink= avfilter_get_by_name("abuffersink");
             if(!buffersrc){
                 av_log(NULL,AV_LOG_ERROR,"filtering source element not found\n");
                 return -1;
-            } 
+            }
             if(!buffersink){
                 av_log(NULL,AV_LOG_ERROR,"filtering sink element not found\n");
                 return -1;
-            }  
+            }
             if(!dec_a_ctx->channel_layout)
                 dec_a_ctx->channel_layout = av_get_default_channel_layout(dec_a_ctx->channels);
             snprintf(args,sizeof(args),"time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%"PRIx64,
@@ -148,7 +148,7 @@ int init_filters(streamMap * stream){
     if(ret<0){
         av_log(NULL,AV_LOG_ERROR,"error occured when avfilter_graph_parse_ptr\n");
         return ret;
-    } 
+    }
     ret = avfilter_graph_config(stream->filtermap->filter_graph,NULL);
     if(ret<0){
         av_log(NULL,AV_LOG_ERROR,"error occured when avfilter_graph_config\n");
@@ -180,6 +180,9 @@ int set_decoder(streamMap * sm,int stream_id){
 int set_pts(AVPacket *pkt,AVStream *stream, int pkt_index){
     AVRational time_base1=stream->time_base;
     int64_t calc_duration=(double)AV_TIME_BASE/av_q2d(stream->r_frame_rate);
+    av_log(NULL,AV_LOG_DEBUG,"av_time_base:%d  \n",AV_TIME_BASE);
+    av_log(NULL,AV_LOG_DEBUG,"stream->r_frame_rate.num=%d   den=%d \n",stream->r_frame_rate.num,stream->r_frame_rate.den);
+    av_log(NULL,AV_LOG_DEBUG,"av_q2d(stream->r_frame_rate):%lf    calc_duration=%"PRId64" \n",av_q2d(stream->r_frame_rate),calc_duration);
     pkt->pts=(double)(pkt_index*calc_duration)/(double)(av_q2d(time_base1)*AV_TIME_BASE);
     pkt->dts=pkt->pts;
     pkt->duration=(double)calc_duration/(double)(av_q2d(time_base1)*AV_TIME_BASE);
@@ -192,23 +195,32 @@ int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,int stream_
     else   av_packet_rescale_ts(pkt,in_stream->time_base,out_stream->time_base);
     pkt->pos = -1;
     pkt->stream_index=stream_index;
-    av_log(NULL,AV_LOG_INFO,"write 1 pkt.pts=%d pkt.dts=%d pkt.duration=%d pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
+    av_log(NULL,AV_LOG_DEBUG,"\nfinal pktpts=%"PRId64" outstream showpts = %lf \n",pkt->pts,pkt->pts*av_q2d(out_stream->time_base));
+    av_log(NULL,AV_LOG_INFO,"write 1 pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
     if (av_interleaved_write_frame(fm->fmt_ctx,pkt) < 0) {
         av_log(NULL,AV_LOG_ERROR, "Error write packet\n");
         return -1;
-    } 
+    }
     return 0;
 }
 
 int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream *out_stream,int pkt_index,AVCodecContext *codec,AVCodecContext *decodec, AVFrame *frame,AVFrame *filt_frame,AVFilterContext *buffersrc_ctx,AVFilterContext *buffersink_ctx, int type){
     int ret;
-    if(pkt.size)
+    if(pkt.size){
         av_packet_rescale_ts(&pkt,in_stream->time_base,in_stream->codec->time_base);
+        av_log(NULL,AV_LOG_DEBUG,"in transcode rescale pkt showpts = %lf \n",pkt.pts*av_q2d(in_stream->codec->time_base));
+    }
+    else{
+        av_log(NULL,AV_LOG_DEBUG,"pkt.size=0",pkt.pts*av_q2d(in_stream->codec->time_base));
+        av_log(NULL,AV_LOG_DEBUG," showpts = %d \n",pkt.pts);
+    }
     while(1){
         ret = decode(decodec,pkt,frame);
-        pkt.size=0; 
+        pkt.size=0;
         if(!ret){
+            av_log(NULL,AV_LOG_DEBUG,"got frame->pts=%"PRId64"  showpts = %lf  frame->nb_samples=%d",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base),frame->nb_samples);
             frame->pts = av_frame_get_best_effort_timestamp(frame);
+            av_log(NULL,AV_LOG_DEBUG," after get best pts=%"PRId64" showpts = %lf \n",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
             while(1){
                 ret = filting(frame,filt_frame,buffersrc_ctx,buffersink_ctx);
                 frame=NULL;
@@ -217,7 +229,10 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
                 else if(ret<0){
                     av_log(NULL,AV_LOG_ERROR,"error occured while filt\n");
                     return ret;
-                } 
+                }
+                //av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  incodec showpts = %lf ",filt_frame->pts,filt_frame->pts*av_q2d(in_stream->codec->time_base));
+                av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%"PRId64" outcodec showpts = %lf filtframe->nb_samples=%d\n",filt_frame->pts,filt_frame->pts*av_q2d(out_stream->codec->time_base),filt_frame->nb_samples);
+
                 ret = encode(codec,filt_frame,new_pkt);
                 if(filt_frame)
                     av_frame_unref(filt_frame);
@@ -226,7 +241,7 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
                 else if(ret<0){
                         av_log(NULL,AV_LOG_ERROR,"error occured while encode\n");
                         return -1;
-                } 
+                }
                 else if(ret == 0 )  return 0;
             }
         }else if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF){
@@ -237,37 +252,48 @@ int transcode_filt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream
                 else if(ret<0){
                         av_log(NULL,AV_LOG_ERROR,"error occured while encode\n");
                         return -1;
-                } 
+                }
                 else if(ret == 0 )  return 0;
             }
             else if(ret<0){
                 av_log(NULL,AV_LOG_ERROR,"error occured while filt\n");
                 return ret;
-            } 
+            }
+            //av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%lf  incodec showpts = %lf ",filt_frame->pts,filt_frame->pts*av_q2d(in_stream->codec->time_base));
+            av_log(NULL,AV_LOG_DEBUG,"got filtframe->pts=%"PRId64"  outcodec showpts = %lf filtframe->nb_samples=%d\n",filt_frame->pts,filt_frame->pts*av_q2d(out_stream->codec->time_base),filt_frame->nb_samples);
+
             ret = encode(codec,filt_frame,new_pkt);
             if( ret == AVERROR_EOF || ret == AVERROR(EAGAIN))   return ret;
             else if(ret<0){
                     av_log(NULL,AV_LOG_ERROR,"error occured while encode\n");
                     return -1;
-            } 
+            }
             else if(ret == 0 )  return 0;
-        } 
+        }
         else if(ret<0){
             av_log(NULL,AV_LOG_ERROR,"error occured while decode\n");
             return -1;
-        } 
+        }
     }
 }
 
 int transcode_unfilt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStream *out_stream,int pkt_index,AVCodecContext *codec,AVCodecContext *decodec, AVFrame *frame, int type){
     int ret;
-    if(pkt.size)
+    if(pkt.size){
         av_packet_rescale_ts(&pkt,in_stream->time_base,in_stream->codec->time_base);
+        av_log(NULL,AV_LOG_DEBUG,"in transcode rescale pkt showpts = %lf \n",pkt.pts*av_q2d(in_stream->codec->time_base));
+    }
+    else{
+        av_log(NULL,AV_LOG_DEBUG,"pkt.size=0",pkt.pts*av_q2d(in_stream->codec->time_base));
+        av_log(NULL,AV_LOG_DEBUG," showpts = %d \n",pkt.pts);
+    }
     while(1){
         ret = decode(decodec,pkt,frame);
-        pkt.size=0; 
+        pkt.size=0;
         if(!ret){
+            av_log(NULL,AV_LOG_DEBUG,"got frame->pts=%lf showpts = %lf ",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
             frame->pts = av_frame_get_best_effort_timestamp(frame);
+            av_log(NULL,AV_LOG_DEBUG,"after get best pts=%lf showpts = %lf \n",frame->pts,frame->pts*av_q2d(in_stream->codec->time_base));
             switch(frame->pict_type){
                 case AV_PICTURE_TYPE_I:av_log(NULL,AV_LOG_DEBUG,"type:I frame\t\n");break;
                 case AV_PICTURE_TYPE_B:av_log(NULL,AV_LOG_DEBUG,"type:B frame\t\n");break;
@@ -280,9 +306,9 @@ int transcode_unfilt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStre
             else if(ret<0){
                     av_log(NULL,AV_LOG_ERROR,"error occured while encode\n");
                     return -1;
-            } 
+            }
             else if(ret == 0 )  return 0;
-        
+
         }else if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF){
             av_log(NULL,AV_LOG_DEBUG,"did not get frame from dec\n");
             ret = encode(codec,NULL,new_pkt);
@@ -290,13 +316,13 @@ int transcode_unfilt(AVPacket pkt, AVPacket *new_pkt, AVStream *in_stream,AVStre
             else if(ret<0){
                     av_log(NULL,AV_LOG_ERROR,"error occured while encode\n");
                     return -1;
-            } 
+            }
             else if(ret == 0 )  return 0;
-        } 
+        }
         else if(ret<0){
             av_log(NULL,AV_LOG_ERROR,"error occured while decode\n");
             return -1;
-        } 
+        }
     }
 }
 

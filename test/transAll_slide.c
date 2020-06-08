@@ -29,15 +29,11 @@ int main(int argc,char **argv){
     meeting->audio->filtermap->descr="aresample=44100";
     meeting->video->cur_pts=0;
     meeting->video->cur_index_pkt_in=0;
-    meeting->video->cur_index_pkt_out=0;
     meeting->audio->cur_pts=0;
     meeting->audio->cur_index_pkt_in=0;
-    meeting->audio->cur_index_pkt_out=0;
     av_dict_set(&meeting->video->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
-    //av_dict_set(&meeting->video->input_fm->ops,"use_wallclock_as_timestamps","1",0);
     av_dict_set(&meeting->audio->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
-    //av_dict_set(&meeting->audio->input_fm->ops,"use_wallclock_as_timestamps","1",0);
-    const char * bitrate="2500k";
+    const char * bitrate="2000k";
    //set input
     if((ret = set_inputs(meeting))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set inputs.\n");
@@ -89,15 +85,6 @@ int main(int argc,char **argv){
     AVStream *in_stream, *out_stream;
     streamMap *sm_v_main = meeting->video;
     streamMap *sm_a = meeting->audio;
-    double rt_bitrate;
-    double cur_out_apkt_pts=0;
-    //av_read_frame(sm_v_main->input_fm->fmt_ctx,&vpkt);
-    //av_read_frame(sm_a->input_fm->fmt_ctx,&apkt);
-    //sm_v_main->cur_pts=vpkt.pts;
-    //sm_a->cur_pts=apkt.pts;
-
-    av_log(NULL,AV_LOG_DEBUG,"video timebase:%d/%d,audio timebase:%d/%d\n",sm_v_main->input_fm->fmt_ctx->streams[0]->time_base.num,sm_v_main->input_fm->fmt_ctx->streams[0]->time_base.den,sm_a->input_fm->fmt_ctx->streams[0]->time_base.num,sm_a->input_fm->fmt_ctx->streams[0]->time_base.den);
-    AVRational tb_test;
     //start
     while(1){
         if(av_compare_ts(sm_v_main->cur_pts, sm_v_main->input_fm->fmt_ctx->streams[0]->time_base,
@@ -105,22 +92,16 @@ int main(int argc,char **argv){
             ifmt_ctx=sm_v_main->input_fm->fmt_ctx;
             in_stream=ifmt_ctx->streams[0];
             out_stream=meeting->output->fmt_ctx->streams[0];
-            tb_test=sm_v_main->input_fm->fmt_ctx->streams[0]->time_base;
             if(av_read_frame(ifmt_ctx,&vpkt)>=0){
                 do{
                     if(vpkt.stream_index==0){
-                        av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d ",sm_v_main->cur_index_pkt_in);
-                        av_log(NULL,AV_LOG_DEBUG,"recev vpkt->pts = %"PRId64" ",vpkt.pts);
-                        av_log(NULL,AV_LOG_DEBUG,"  showpts = %lf \n",(vpkt.pts * av_q2d(sm_v_main->input_fm->fmt_ctx->streams[0]->time_base)));
+                        av_log(NULL,AV_LOG_DEBUG,"the vpkt_index:%d\n",sm_v_main->cur_index_pkt_in);
                         vpkt_over=0;
-//                        if(vpkt.pts == AV_NOPTS_VALUE){
-                            ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
-                            av_log(NULL,AV_LOG_DEBUG,"after set vpkt->pts = %"PRId64" \n",vpkt.pts);
-                            if(ret<0){
-                                av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-                                goto end;
-                            }
- //                       }
+                        ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
+                        if(ret<0){
+                            av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
+                            goto end;
+                        }
                         sm_v_main->cur_index_pkt_in++;
                         sm_v_main->cur_pts=vpkt.pts;
                         while(1){
@@ -141,15 +122,7 @@ int main(int argc,char **argv){
                                    av_usleep(pts_time - now_time);
 
                                 av_log(NULL,AV_LOG_INFO,"video: ");
-                                rt_bitrate = (newvpkt.size *8)/av_q2d(sm_v_main->codecmap->dec_ctx->time_base)/1000.0;
-                                av_log(NULL,AV_LOG_INFO,"bitrate= %7.1fkbits/s\n",rt_bitrate);
-                                //av_log(NULL,AV_LOG_DEBUG,"\nfinal vpktpts=%d incodec showpts = %lf \n",newvpkt.pts*av_q2d(in_stream->codec->time_base));
-                                av_log(NULL,AV_LOG_DEBUG,"\nfinal vpktpts=%"PRId64" outcodec showpts = %lf \n",newvpkt.pts,newvpkt.pts*av_q2d(out_stream->codec->time_base));
-                                //av_log(NULL,AV_LOG_DEBUG,"\nfinal vpktpts=%d outstream showpts = %lf \n",newvpkt.pts*av_q2d(out_stream->time_base));
-
-                                av_log(NULL,AV_LOG_DEBUG,"the vpkt_out:%d",sm_v_main->cur_index_pkt_out);
                                 ret = write_pkt(&newvpkt,in_stream,out_stream,0,meeting->output,1);
-                                sm_v_main->cur_index_pkt_out++;
                                 av_free_packet(&newvpkt);
                                 av_free_packet(&vpkt);
                                 vpkt.size=0;
@@ -181,9 +154,7 @@ int main(int argc,char **argv){
             if(av_read_frame(ifmt_ctx,&apkt)>=0){
                 do{
                     if(apkt.stream_index==0){
-                        av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d ",sm_a->cur_index_pkt_in);
-                        av_log(NULL,AV_LOG_DEBUG,"recev apkt->pts = %"PRId64" ",apkt.pts);
-                        av_log(NULL,AV_LOG_DEBUG,"  showpts = %lf \n",apkt.pts*av_q2d(sm_a->input_fm->fmt_ctx->streams[0]->time_base));
+                        av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d\n",sm_a->cur_index_pkt_in);
                         apkt_over=0;
                         sm_a->cur_index_pkt_in++;
                         sm_a->cur_pts=apkt.pts;
@@ -199,23 +170,7 @@ int main(int argc,char **argv){
                       av_bitstream_filter_filter(aacbsfc,out_stream->codec, NULL, &newapkt.data,&newapkt.size,newapkt.data,newapkt.size,0);
 #endif
                                 av_log(NULL,AV_LOG_INFO,"audio: ");
-                                rt_bitrate = (newapkt.size *8)/av_q2d(sm_a->codecmap->dec_ctx->time_base)/1000.0;
-                                av_log(NULL,AV_LOG_INFO,"bitrate= %7.1fkbits/s\n",rt_bitrate);
-                                //av_log(NULL,AV_LOG_DEBUG,"\nfinal apktpts=%d incodec showpts = %lf \n",newapkt.pts*av_q2d(in_stream->codec->time_base));
-                                //cur_out_apkt_pts=newapkt.pts;
-                                //cur_out_apkt_pts+=0.023;
-                                //newapkt.pts+=1024;
-                                newapkt.dts = newapkt.pts;
-                                av_log(NULL,AV_LOG_DEBUG,"\nfinal apktpts=%"PRId64" outcodec showpts = %lf size=%d\n",newapkt.pts,newapkt.pts*av_q2d(out_stream->codec->time_base),newapkt.size);
-                                //av_log(NULL,AV_LOG_DEBUG,"\nfinal apktpts=%d outstream showpts = %lf \n",newapkt.pts*av_q2d(out_stream->time_base));
-                                av_log(NULL,AV_LOG_DEBUG,"the apkt_out:%d",sm_a->cur_index_pkt_out);
-                                //newapkt.pts = (160*sm_a->cur_index_pkt_out*44100)/8000;
-//                                cur_out_apkt_pts+=0.02;
-//                                av_log(NULL,AV_LOG_DEBUG,"cur_out_apkt_pts:%lf",cur_out_apkt_pts);
-//                                newapkt.pts = cur_out_apkt_pts*44100;
-//                                newapkt.dts = newapkt.pts;
                                 ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output,1);
-                                sm_a->cur_index_pkt_out++;
                                 av_free_packet(&newapkt);
                                 av_free_packet(&apkt);
                                 apkt.size=0;

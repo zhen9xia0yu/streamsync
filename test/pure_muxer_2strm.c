@@ -145,11 +145,6 @@ int main(int argc,char **argv){
                     break;
                 }
 
-
-
-
-
-
             }
             else {
                 av_log(NULL, AV_LOG_DEBUG, "sm_a\n");
@@ -276,7 +271,7 @@ int main(int argc,char **argv){
 //        }
 //    }
 
-    av_write_trailer(meeting->output->fmt_ctx);
+//    av_write_trailer(meeting->output->fmt_ctx);
 end:
     free_meetPro(meeting);
     free(meeting);

@@ -5,24 +5,35 @@ void init_meetPro(meetPro * mp){
      * 初始化结构体指针，从外到内。
     */
     mp->video = (streamMap *) calloc(1,sizeof(streamMap));
+    mp->video_auxi = (streamMap *) calloc(1,sizeof(streamMap));
     mp->audio = (streamMap *) calloc(1,sizeof(streamMap));
     mp->output = (fileMap *) calloc(1,sizeof(fileMap));
+    mp->output_auxi = (fileMap *) calloc(1,sizeof(fileMap));
     init_streamMap(mp->video);
+    init_streamMap(mp->video_auxi);
     init_streamMap(mp->audio);
     init_fileMap(mp->output);
+    init_fileMap(mp->output_auxi);
 }
 
 void free_meetPro(meetPro * mp){
     free_streamMap(mp->video);
+    free_streamMap(mp->video_auxi);
     free_streamMap(mp->audio);
     free_fileMap(mp->output);
+    free_fileMap(mp->output_auxi);
 }
 
 int set_inputs(meetPro * meeting){
     int ret;
     meeting->video->input_fm->fmt_ctx=NULL;
+    meeting->video_auxi->input_fm->fmt_ctx=NULL;
     meeting->audio->input_fm->fmt_ctx=NULL;
     if ((ret = avformat_open_input(&meeting->video->input_fm->fmt_ctx, meeting->video->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
+        av_log(NULL,AV_LOG_ERROR,"Could not open input video file.\n");
+        return ret;
+    }
+    if ((ret = avformat_open_input(&meeting->video_auxi->input_fm->fmt_ctx, meeting->video->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
         av_log(NULL,AV_LOG_ERROR,"Could not open input video file.\n");
         return ret;
     }
@@ -34,12 +45,17 @@ int set_inputs(meetPro * meeting){
         av_log(NULL,AV_LOG_ERROR, "Failed to retrieve input video stream information\n");
         return ret;
     }
+    if ((ret = avformat_find_stream_info(meeting->video_auxi->input_fm->fmt_ctx, 0)) < 0) {
+        av_log(NULL,AV_LOG_ERROR, "Failed to retrieve input video stream information\n");
+        return ret;
+    }
     if ((ret = avformat_find_stream_info(meeting->audio->input_fm->fmt_ctx, 0)) < 0) {
         av_log(NULL,AV_LOG_ERROR, "Failed to retrieve input audio stream information\n");
         return ret;
     }
     av_log(NULL,AV_LOG_INFO,"===========Input Information==========\n");
     av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
+    av_dump_format(meeting->video_auxi->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
     av_dump_format(meeting->audio->input_fm->fmt_ctx, 0, meeting->audio->input_fm->filename, 0);
     av_log(NULL,AV_LOG_INFO,"======================================\n");
     return 0;
@@ -146,35 +162,72 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id,const char 
 int set_outputs(meetPro *meeting,int trans_video,int trans_audio, const char *bitrate){
     int i,ret;
     av_log(NULL,AV_LOG_DEBUG,"ofmt=%x\n",meeting->output->ofmt);
+    av_log(NULL,AV_LOG_DEBUG,"ofmt_auxi=%x\n",meeting->output_auxi->ofmt);
+
     avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "flv", meeting->output->filename);
     if (!meeting->output->fmt_ctx) {
-        av_log(NULL,AV_LOG_ERROR, "Could not create output context\n");
+        av_log(NULL,AV_LOG_ERROR, "Could not create output main context\n");
         return -1;
     }
+
+    avformat_alloc_output_context2(&meeting->output_auxi->fmt_ctx, NULL, "flv", meeting->output_auxi->filename);
+    if (!meeting->output_auxi->fmt_ctx) {
+        av_log(NULL,AV_LOG_ERROR, "Could not create output auxiliary context\n");
+        return -1;
+    }
+
     *meeting->output->ofmt = *meeting->output->fmt_ctx->oformat;
+    *meeting->output_auxi->ofmt = *meeting->output_auxi->fmt_ctx->oformat;
     av_log(NULL,AV_LOG_DEBUG,"ofmt=%x\n",meeting->output->ofmt);
+    av_log(NULL,AV_LOG_DEBUG,"ofmt_auxi=%x\n",meeting->output_auxi->ofmt);
     if(!trans_video){
         for (i = 0; i < meeting->video->input_fm->fmt_ctx->nb_streams; i++) {
             if(meeting->video->input_fm->fmt_ctx->streams[i]->codec->codec_type==AVMEDIA_TYPE_VIDEO){
-            AVStream *in_stream = meeting->video->input_fm->fmt_ctx->streams[i];
-            AVStream *out_stream = avformat_new_stream(meeting->output->fmt_ctx, in_stream->codec->codec);
-            if (!out_stream) {
-                printf( "Failed allocating output stream\n");
-                ret = AVERROR_UNKNOWN;
-                return -1;
-            }
-            if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
-                printf( "Failed to copy context from input to output stream codec context\n");
-                return -1;
-            }
-            out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
-            if (meeting->output->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-                out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
-            break;
+                AVStream *in_stream = meeting->video->input_fm->fmt_ctx->streams[i];
+                AVStream *out_stream = avformat_new_stream(meeting->output->fmt_ctx, in_stream->codec->codec);
+                if (!out_stream) {
+                    av_log(NULL,AV_LOG_ERROR, "Failed allocating output stream\n");
+                    ret = AVERROR_UNKNOWN;
+                    return -1;
+                }
+                if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
+                    av_log(NULL,AV_LOG_ERROR, "Failed to copy context from input to output stream codec context\n");
+                    return -1;
+                }
+                out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
+                if (meeting->output->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+                    out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+                break;
             }
         }
+
+        for (i = 0; i < meeting->video_auxi->input_fm->fmt_ctx->nb_streams; i++) {
+            if(meeting->video_auxi->input_fm->fmt_ctx->streams[i]->codec->codec_type==AVMEDIA_TYPE_VIDEO){
+                AVStream *in_stream = meeting->video_auxi->input_fm->fmt_ctx->streams[i];
+                AVStream *out_stream = avformat_new_stream(meeting->output_auxi->fmt_ctx, in_stream->codec->codec);
+                if (!out_stream) {
+                    av_log(NULL,AV_LOG_ERROR, "Failed allocating output auxiliary stream\n");
+                    ret = AVERROR_UNKNOWN;
+                    return -1;
+                }
+                if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
+                    av_log(NULL,AV_LOG_ERROR, "Failed to copy context from input to output stream codec context\n");
+                    return -1;
+                }
+                out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
+                if (meeting->output_auxi->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+                    out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+                break;
+            }
+        }
+
+
     }else{
         if ((ret = add_stream(meeting,meeting->video->codecmap,VIDEO_CODEC_ID,bitrate)) < 0){
+            av_log(NULL,AV_LOG_ERROR,"error occured when add video stream failed.\n");
+            return -1;
+        }
+        if ((ret = add_stream(meeting,meeting->video_auxi->codecmap,VIDEO_CODEC_ID,bitrate)) < 0){
             av_log(NULL,AV_LOG_ERROR,"error occured when add video stream failed.\n");
             return -1;
         }
@@ -182,32 +235,56 @@ int set_outputs(meetPro *meeting,int trans_video,int trans_audio, const char *bi
     if(!trans_audio){
         for (i = 0; i < meeting->audio->input_fm->fmt_ctx->nb_streams; i++) {
             if(meeting->audio->input_fm->fmt_ctx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO){
-            AVStream *in_stream = meeting->audio->input_fm->fmt_ctx->streams[i];
-            AVStream *out_stream = avformat_new_stream(meeting->output->fmt_ctx, in_stream->codec->codec);
-            if (!out_stream) {
-                printf( "Failed allocating output stream\n");
-                ret = AVERROR_UNKNOWN;
-                return -1;
-            }
-            if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
-                printf( "Failed to copy context from input to output stream codec context\n");
-                return -1;
-            }
-            out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
-            if (meeting->output->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-                out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
-            break;
+                AVStream *in_stream = meeting->audio->input_fm->fmt_ctx->streams[i];
+                AVStream *out_stream = avformat_new_stream(meeting->output->fmt_ctx, in_stream->codec->codec);
+                AVStream *out_stream_auxi = avformat_new_stream(meeting->output_auxi->fmt_ctx, in_stream->codec->codec);
+                if (!out_stream) {
+                    printf( "Failed allocating output stream\n");
+                    ret = AVERROR_UNKNOWN;
+                    return -1;
+                }
+                if (!out_stream_auxi) {
+                    printf( "Failed allocating output stream\n");
+                    ret = AVERROR_UNKNOWN;
+                    return -1;
+                }
+
+                if (avcodec_copy_context(out_stream->codec, in_stream->codec) < 0) {
+                    printf( "Failed to copy context from input to output stream codec context\n");
+                    return -1;
+                }
+                if (avcodec_copy_context(out_stream_auxi->codec, in_stream->codec) < 0) {
+                    printf( "Failed to copy context from input to output stream codec context\n");
+                    return -1;
+                }
+
+                out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
+                out_stream_auxi->codec->codec_tag = 0;//与编码器相关的附加信息
+                if (meeting->output->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+                    out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+                break;
+                if (meeting->output_auxi->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+                    out_stream_auxi->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+                break;
+
             }
         }
+
     }
     else{
         if ((ret = add_stream(meeting,meeting->audio->codecmap,AUDIO_CODEC_ID,bitrate)) < 0){
           av_log(NULL,AV_LOG_ERROR,"error occured when add audio stream failed.\n");
            return -1;
         }
+        if ((ret = add_stream(meeting,meeting->audio->codecmap,AUDIO_CODEC_ID,bitrate)) < 0){
+          av_log(NULL,AV_LOG_ERROR,"error occured when add audio stream failed.\n");
+           return -1;
+        }
+
     }
     av_log(NULL,AV_LOG_INFO,"==========Output Information==========\n");
     av_dump_format(meeting->output->fmt_ctx, 0, meeting->output->filename, 1);
+    av_dump_format(meeting->output_auxi->fmt_ctx, 0, meeting->output->filename, 1);
     av_log(NULL,AV_LOG_INFO,"======================================\n");
     //Open output file
     if (!(meeting->output->ofmt->flags & AVFMT_NOFILE)) {
@@ -216,11 +293,23 @@ int set_outputs(meetPro *meeting,int trans_video,int trans_audio, const char *bi
             return -1;
         }
     }
+    if (!(meeting->output_auxi->ofmt->flags & AVFMT_NOFILE)) {
+        if (avio_open(&meeting->output_auxi->fmt_ctx->pb, meeting->output_auxi->filename, AVIO_FLAG_WRITE) < 0) {
+            av_log(NULL,AV_LOG_ERROR, "Could not open output file '%s'", meeting->output->filename);
+            return -1;
+        }
+    }
+
     //Write file header
     if (avformat_write_header(meeting->output->fmt_ctx, NULL) < 0) {
         av_log(NULL,AV_LOG_ERROR, "could not write the header to output.\n");
         return -1;
     }
+    if (avformat_write_header(meeting->output_auxi->fmt_ctx, NULL) < 0) {
+        av_log(NULL,AV_LOG_ERROR, "could not write the header to output.\n");
+        return -1;
+    }
+
     return 0;
 }
 

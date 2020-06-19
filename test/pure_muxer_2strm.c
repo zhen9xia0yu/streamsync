@@ -7,7 +7,7 @@
 int main(int argc,char **argv){
     int ret,i,trans_video,trans_audio,vfile_over,afile_over,vfile_auxi_over;
     meetPro *meeting;
-    AVPacket vpkt,apkt,vpkt_auxi;
+    AVPacket vpkt,apkt,vpkt_auxi,*apkt_auxi;
     if(argc!=6){
         av_log(NULL,AV_LOG_ERROR,"usage: %s <input video main file> <input video auxiliary file> <input audio file> <output main file> <output auxiliary file>\n",argv[0]);
         return -1;
@@ -56,9 +56,10 @@ int main(int argc,char **argv){
     init_packet(&vpkt);
     init_packet(&vpkt_auxi);
     init_packet(&apkt);
+    //init_packet(apkt_auxi);
     //ready to syncing streams
     AVFormatContext *ifmt_ctx;
-    AVStream *in_stream, *out_stream;
+    AVStream *in_stream, *out_stream, *out_stream_auxi;
     streamMap *sm_v_main = meeting->video;
     streamMap *sm_v_auxi = meeting->video_auxi;
     streamMap *sm_a = meeting->audio;
@@ -82,6 +83,7 @@ int main(int argc,char **argv){
             if(av_compare_ts(sm_v_main->cur_pts, time_base_main,
                              sm_a->cur_pts, time_base_audio) <=0) {
                 av_log(NULL, AV_LOG_DEBUG, "sm_v_main\n");
+
                 ifmt_ctx =  sm_v_main->input_fm->fmt_ctx;
                 in_stream = ifmt_ctx->streams[0];
                 out_stream = meeting->output->fmt_ctx->streams[0];
@@ -108,10 +110,38 @@ int main(int argc,char **argv){
                     av_log(NULL,AV_LOG_DEBUG,"the video main file is over\n");
                     break;
                 }
-
             }
             else {
                 av_log(NULL, AV_LOG_DEBUG, "sm_a\n");
+
+                ifmt_ctx = sm_a->input_fm->fmt_ctx;
+                in_stream=ifmt_ctx->streams[0];
+                out_stream=meeting->output->fmt_ctx->streams[1];
+                out_stream_auxi=meeting->output_auxi->fmt_ctx->streams[1];
+                if(av_read_frame(ifmt_ctx,&apkt)>=0){
+                    do{
+                        if(apkt.stream_index==0){
+                            apkt_auxi = av_packet_clone(&apkt);
+                            av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d\n",sm_a->cur_index_pkt_in);
+                            sm_a->cur_index_pkt_in++;
+                            sm_a->cur_pts=apkt.pts;
+                            av_log(NULL,AV_LOG_INFO,"audio: ");
+                            ret = write_pkt(&apkt,in_stream,out_stream,1,meeting->output,1);
+                            ret = write_pkt(apkt_auxi,in_stream,out_stream_auxi,1,meeting->output_auxi,1);
+                            av_packet_unref(&apkt);
+                            av_packet_unref(apkt_auxi);
+                            if(ret<0){
+                                av_log(NULL,AV_LOG_ERROR,"error occured while write 1 apkt\n");
+                                goto end;
+                            }
+                            break;
+                       }
+                    }while(av_read_frame(ifmt_ctx,&apkt)>=0);
+                }else {
+                    afile_over=1;
+                    av_log(NULL,AV_LOG_DEBUG,"the audio file is over\n");
+                    break;
+                }
             }
         else
             if(av_compare_ts(sm_v_auxi->cur_pts, time_base_auxi,

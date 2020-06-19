@@ -255,31 +255,113 @@ int main(int argc,char **argv){
             }
 
         }
-//    if(vfile_over){
-//        ifmt_ctx = sm_a->input_fm->fmt_ctx;
-//        in_stream=ifmt_ctx->streams[0];
-//        out_stream=meeting->output->fmt_ctx->streams[1];
-//        if(av_read_frame(ifmt_ctx,&apkt)>=0){
-//            av_log(NULL,AV_LOG_DEBUG,"the audio file is not over\n");
-//            do{
-//                if(apkt.stream_index==0){
-//                    av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d\n",sm_a->cur_index_pkt_in);
-//                    sm_a->cur_index_pkt_in++;
-//                    sm_a->cur_pts=apkt.pts;
-//                    av_log(NULL,AV_LOG_INFO,"audio: ");
-//                    ret = write_pkt(&apkt,in_stream,out_stream,1,meeting->output,1);
-//                    av_packet_unref(&apkt);
-//                    if(ret<0){
-//                        av_log(NULL,AV_LOG_ERROR,"error occured while write 1 apkt\n");
-//                        goto end;
-//                    }
-//               }
-//            }while(av_read_frame(ifmt_ctx,&apkt)>=0);
-//        }else {
-//            av_log(NULL,AV_LOG_DEBUG,"the audio file is over\n");
-//        }
-//    }
-//
+
+    if(vfile_over){
+        //finish auido file
+        ifmt_ctx = sm_a->input_fm->fmt_ctx;
+        in_stream=ifmt_ctx->streams[0];
+        out_stream=meeting->output->fmt_ctx->streams[1];
+        out_stream_auxi=meeting->output_auxi->fmt_ctx->streams[1];
+        if(av_read_frame(ifmt_ctx,&apkt)>=0){
+            av_log(NULL,AV_LOG_DEBUG,"the audio file is not over\n");
+            do{
+                if(apkt.stream_index==0){
+                    apkt_auxi = av_packet_clone(&apkt);
+                    av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d\n",sm_a->cur_index_pkt_in);
+                    sm_a->cur_index_pkt_in++;
+                    sm_a->cur_pts=apkt.pts;
+                    av_log(NULL,AV_LOG_INFO,"audio: ");
+                    ret = write_pkt(&apkt,in_stream,out_stream,1,meeting->output,1);
+                    ret = write_pkt(apkt_auxi,in_stream,out_stream_auxi,1,meeting->output_auxi,1);
+                    av_packet_unref(&apkt);
+                    av_packet_unref(apkt_auxi);
+                    if(ret<0){
+                        av_log(NULL,AV_LOG_ERROR,"error occured while write 1 apkt\n");
+                        goto end;
+                    }
+               }
+            }while(av_read_frame(ifmt_ctx,&apkt)>=0);
+        }else {
+            av_log(NULL,AV_LOG_DEBUG,"the audio file is over\n");
+        }
+        //finish video auxi
+        ifmt_ctx=sm_v_auxi->input_fm->fmt_ctx;
+        in_stream=ifmt_ctx->streams[0];
+        out_stream=meeting->output_auxi->fmt_ctx->streams[0];
+        if(av_read_frame(ifmt_ctx,&vpkt_auxi)>=0){
+            av_log(NULL,AV_LOG_DEBUG,"the video auxi file is not over\n");
+            do{
+                ret = set_pts(&vpkt_auxi,in_stream,sm_v_auxi->cur_index_pkt_in);
+                if(ret<0){
+                    av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
+                    goto end;
+                }
+                sm_v_auxi->cur_index_pkt_in++;
+                sm_v_auxi->cur_pts=vpkt_auxi.pts;
+                av_log(NULL,AV_LOG_INFO,"video: ");
+                ret = write_pkt(&vpkt_auxi,in_stream,out_stream,0,meeting->output_auxi,0);
+                av_packet_unref(&vpkt_auxi);
+                if(ret<0){
+                    av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
+                    goto end;
+                }
+            }while(av_read_frame(ifmt_ctx,&vpkt_auxi)>=0);
+        }
+    }
+
+    if(vfile_auxi_over){
+        //finish auido file
+        ifmt_ctx = sm_a->input_fm->fmt_ctx;
+        in_stream=ifmt_ctx->streams[0];
+        out_stream=meeting->output->fmt_ctx->streams[1];
+        out_stream_auxi=meeting->output_auxi->fmt_ctx->streams[1];
+        if(av_read_frame(ifmt_ctx,&apkt)>=0){
+            av_log(NULL,AV_LOG_DEBUG,"the audio file is not over\n");
+            do{
+                if(apkt.stream_index==0){
+                    apkt_auxi = av_packet_clone(&apkt);
+                    av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d\n",sm_a->cur_index_pkt_in);
+                    sm_a->cur_index_pkt_in++;
+                    sm_a->cur_pts=apkt.pts;
+                    av_log(NULL,AV_LOG_INFO,"audio: ");
+                    ret = write_pkt(&apkt,in_stream,out_stream,1,meeting->output,1);
+                    ret = write_pkt(apkt_auxi,in_stream,out_stream_auxi,1,meeting->output_auxi,1);
+                    av_packet_unref(&apkt);
+                    av_packet_unref(apkt_auxi);
+                    if(ret<0){
+                        av_log(NULL,AV_LOG_ERROR,"error occured while write 1 apkt\n");
+                        goto end;
+                    }
+               }
+            }while(av_read_frame(ifmt_ctx,&apkt)>=0);
+        }else {
+            av_log(NULL,AV_LOG_DEBUG,"the audio file is over\n");
+        }
+        //finish video main
+        ifmt_ctx=sm_v_main->input_fm->fmt_ctx;
+        in_stream=ifmt_ctx->streams[0];
+        out_stream=meeting->output->fmt_ctx->streams[0];
+        if(av_read_frame(ifmt_ctx,&vpkt)>=0){
+            av_log(NULL,AV_LOG_DEBUG,"the video auxi file is not over\n");
+            do{
+                ret = set_pts(&vpkt,in_stream,sm_v_main->cur_index_pkt_in);
+                if(ret<0){
+                    av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
+                    goto end;
+                }
+                sm_v_main->cur_index_pkt_in++;
+                sm_v_main->cur_pts=vpkt.pts;
+                av_log(NULL,AV_LOG_INFO,"video: ");
+                ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output,0);
+                av_packet_unref(&vpkt);
+                if(ret<0){
+                    av_log(NULL,AV_LOG_ERROR,"error occured while write 1 vpkt\n");
+                    goto end;
+                }
+            }while(av_read_frame(ifmt_ctx,&vpkt)>=0);
+        }
+    }
+
     av_write_trailer(meeting->output->fmt_ctx);
     av_write_trailer(meeting->output_auxi->fmt_ctx);
 end:

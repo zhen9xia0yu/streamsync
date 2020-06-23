@@ -33,7 +33,7 @@ int set_inputs(meetPro * meeting){
         av_log(NULL,AV_LOG_ERROR,"Could not open input video file.\n");
         return ret;
     }
-    if ((ret = avformat_open_input(&meeting->video_auxi->input_fm->fmt_ctx, meeting->video_auxi->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
+    if ((ret = avformat_open_input(&meeting->video_auxi->input_fm->fmt_ctx, meeting->video_auxi->input_fm->filename, 0, &meeting->video_auxi->input_fm->ops)) < 0) {
         av_log(NULL,AV_LOG_ERROR,"Could not open input video file.\n");
         return ret;
     }

@@ -173,31 +173,53 @@ int main(int argc,char **argv){
             }while(av_read_frame(ifmt_ctx,&vpkt)>=0);
         }
     }
-//    if(vfile_over){
-//        ifmt_ctx = sm_a->input_fm->fmt_ctx;
-//        in_stream=ifmt_ctx->streams[0];
-//        out_stream=meeting->output->fmt_ctx->streams[1];
-//        if(av_read_frame(ifmt_ctx,&apkt)>=0){
-//            av_log(NULL,AV_LOG_DEBUG,"the audio file is not over\n");
-//            do{
-//                if(apkt.stream_index==0){
-//                    av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d\n",sm_a->cur_index_pkt_in);
-//                    sm_a->cur_index_pkt_in++;
-//                    sm_a->cur_pts=apkt.pts;
-//                    av_log(NULL,AV_LOG_INFO,"audio: ");
-//                    ret = write_pkt(&apkt,in_stream,out_stream,1,meeting->output,1);
-//                    av_packet_unref(&apkt);
-//                    if(ret<0){
-//                        av_log(NULL,AV_LOG_ERROR,"error occured while write 1 apkt\n");
-//                        goto end;
-//                    }
-//               }
-//            }while(av_read_frame(ifmt_ctx,&apkt)>=0);
-//        }else {
-//            av_log(NULL,AV_LOG_DEBUG,"the audio file is over\n");
-//        }
-//    }
-//
+    if(vfile_over){
+        ifmt_ctx = sm_a->input_fm->fmt_ctx;
+        in_stream=ifmt_ctx->streams[0];
+        out_stream=meeting->output->fmt_ctx->streams[1];
+        if(av_read_frame(ifmt_ctx,&apkt)>=0){
+            do{
+                if(apkt.stream_index==0){
+                    av_log(NULL,AV_LOG_DEBUG,"the apkt_index:%d\n",sm_a->cur_index_pkt_in);
+                    apkt_over=0;
+                    sm_a->cur_index_pkt_in++;
+                    sm_a->cur_pts=apkt.pts;
+                    while(1){
+                        ret = transcode_filt(apkt,&newapkt,in_stream,out_stream,
+                                        sm_a->cur_index_pkt_in,
+                                        sm_a->codecmap->codec_ctx,sm_a->codecmap->dec_ctx,
+                                        aframe,filt_aframe,
+                                        sm_a->filtermap->buffersrc_ctx,
+                                        sm_a->filtermap->buffersink_ctx,1);
+                        if(ret==0){
+                            av_log(NULL,AV_LOG_INFO,"audio: ");
+                            ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output,1);
+                            av_free_packet(&newapkt);
+                            av_free_packet(&apkt);
+                            apkt.size=0;
+                            if(ret<0){
+                                av_log(NULL,AV_LOG_ERROR,"error occured while write 1 apkt\n");
+                                goto end;
+                            }
+                        }else if(ret == AVERROR(EAGAIN)|| ret == AVERROR_EOF){
+                            if(ret == AVERROR_EOF)
+                                av_log(NULL,AV_LOG_DEBUG,"its eof\n");
+                            if(ret == AVERROR(EAGAIN))
+                                av_log(NULL,AV_LOG_DEBUG,"need more data\n");
+                            apkt_over=1;
+                            break;
+                        }else if(ret<0){
+                            av_log(NULL,AV_LOG_ERROR,"error occured while transcoding a.\n");
+                            goto end;
+                        }
+                    }
+                   // if(apkt_over)  break;
+                }
+            }while(av_read_frame(ifmt_ctx,&apkt)>=0);
+        }else {
+            av_log(NULL,AV_LOG_DEBUG,"the audio file is over\n");
+        }
+    }
     av_write_trailer(meeting->output->fmt_ctx);
 end:
     free_meetPro(meeting);

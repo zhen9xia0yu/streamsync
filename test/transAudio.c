@@ -4,6 +4,30 @@
 #include <string.h>
 #include "ss_process.h"
 
+int flush_encode(AVCodecContext *codec, AVFrame *frame, AVPacket *pkt){
+    int ret;
+    ret = avcodec_send_frame(codec,NULL);
+    if(ret<0){
+            av_log(NULL,AV_LOG_DEBUG,"sending null to encoder while flushing\n");
+           // return ret;
+    }
+    else av_log(NULL,AV_LOG_DEBUG,"send 1 frame to encoder ok\n");
+    ret = avcodec_receive_packet(codec,pkt);
+    if(ret == AVERROR(EAGAIN)){
+        av_log(NULL,AV_LOG_DEBUG,"the encoder need more frames\n");
+        return ret;
+    }else if(ret == AVERROR_EOF){
+        av_log(NULL,AV_LOG_DEBUG,"the encoder is eof\n");
+        return ret;
+    }
+    else if(ret <0){
+        av_log(NULL,AV_LOG_ERROR,"error while receive pkt from encoder\n");
+        return -1;
+    }
+    av_log(NULL,AV_LOG_DEBUG,"got 1 pkt from encoder\n");
+    return 0;
+}
+
 int main(int argc,char **argv){
     int ret,i,apkt_over,trans_video,vfile_over,afile_over;
     meetPro *meeting;
@@ -220,6 +244,29 @@ int main(int argc,char **argv){
             av_log(NULL,AV_LOG_DEBUG,"the audio file is over\n");
         }
     }
+
+        in_stream=ifmt_ctx->streams[0];
+        out_stream=meeting->output->fmt_ctx->streams[1];
+    for(;;){
+        av_free_packet(&newapkt);
+        ret = flush_encode(sm_a->codecmap->codec_ctx,NULL,&newapkt);
+        if( ret == AVERROR_EOF )    break;
+        if( ret == AVERROR(EAGAIN))   continue;
+        else if(ret<0){
+            av_log(NULL,AV_LOG_ERROR,"error occured while encode\n");
+            goto end;
+        }
+        else if(ret == 0 )  {
+            av_log(NULL,AV_LOG_INFO,"audio: ");
+            ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output,1);
+            av_free_packet(&newapkt);
+            if(ret<0){
+                av_log(NULL,AV_LOG_ERROR,"error occured while write 1 apkt\n");
+                goto end;
+            }
+        }
+    }
+
     av_write_trailer(meeting->output->fmt_ctx);
 end:
     free_meetPro(meeting);

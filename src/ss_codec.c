@@ -66,3 +66,27 @@ int encode(AVCodecContext *codec, AVFrame *frame, AVPacket *pkt){
     return 0;
 }
 
+int flush_encoder(AVCodecContext *codec, AVFrame *frame, AVPacket *pkt){
+    int ret;
+    ret = avcodec_send_frame(codec,NULL);
+    if(ret<0){
+            av_log(NULL,AV_LOG_DEBUG,"sending null to encoder while flushing\n");
+           // return ret;
+    }
+    else av_log(NULL,AV_LOG_DEBUG,"send 1 frame to encoder ok\n");
+    ret = avcodec_receive_packet(codec,pkt);
+    if(ret == AVERROR(EAGAIN)){
+        av_log(NULL,AV_LOG_DEBUG,"the encoder need more frames\n");
+        return ret;
+    }else if(ret == AVERROR_EOF){
+        av_log(NULL,AV_LOG_DEBUG,"the encoder is eof\n");
+        return ret;
+    }
+    else if(ret <0){
+        av_log(NULL,AV_LOG_ERROR,"error while receive pkt from encoder\n");
+        return -1;
+    }
+    av_log(NULL,AV_LOG_DEBUG,"got 1 pkt from encoder\n");
+    return 0;
+}
+

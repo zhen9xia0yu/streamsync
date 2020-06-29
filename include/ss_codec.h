@@ -19,5 +19,6 @@ void init_codecMap(codecMap * cm);
 void free_codecMap(codecMap * cm);
 int decode(AVCodecContext *decodec, AVPacket pkt, AVFrame *frame);
 int encode(AVCodecContext *codec, AVFrame *frame, AVPacket *pkt);
+int flush_encoder(AVCodecContext *codec, AVFrame *frame, AVPacket *pkt);
 
 #endif

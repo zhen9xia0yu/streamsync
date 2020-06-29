@@ -4,9 +4,6 @@
 #include <string.h>
 #include "ss_process.h"
 
-#define USE_H264BSF 1
-#define USE_AACBSF 1
-
 int main(int argc,char **argv){
     int ret,i,apkt_over,trans_video;
     meetPro *meeting;
@@ -64,12 +61,6 @@ int main(int argc,char **argv){
     init_packet(&newapkt);
     aframe = av_frame_alloc();
     filt_aframe = av_frame_alloc();
-#if USE_H264BSF
-    AVBitStreamFilterContext* h264bsfc = av_bitstream_filter_init("h264_mp4toannexb");
-#endif
-#if USE_AACBSF
-    AVBitStreamFilterContext* aacbsfc = av_bitstream_filter_init("aac_adtstoasc");
-#endif
     //ready to syncing streams
     AVFormatContext *ifmt_ctx;
     AVStream *in_stream, *out_stream;
@@ -91,14 +82,6 @@ int main(int argc,char **argv){
                     }
                     sm_v_main->cur_index_pkt_in++;
                     sm_v_main->cur_pts=vpkt.pts;
-#if USE_H264BSF
-                    ret = av_bitstream_filter_filter(h264bsfc, in_stream->codec,NULL,&vpkt.data,&vpkt.size,vpkt.data,vpkt.size,0);
-                    if(ret<0)
-                    {
-                        av_log(NULL,AV_LOG_ERROR,"av_bitstream_filter_filter error\n");
-                        goto end;
-                    }
-#endif
                     av_log(NULL,AV_LOG_INFO,"video: ");
                     ret = write_pkt(&vpkt,in_stream,out_stream,0,meeting->output,0);
                     av_packet_unref(&vpkt);
@@ -128,9 +111,6 @@ int main(int argc,char **argv){
                                             sm_a->filtermap->buffersrc_ctx,
                                             sm_a->filtermap->buffersink_ctx,1);
                             if(ret==0){
-#if USE_AACBSF
-                      av_bitstream_filter_filter(aacbsfc,out_stream->codec, NULL, &newapkt.data,&newapkt.size,newapkt.data,newapkt.size,0);
-#endif
                                 av_log(NULL,AV_LOG_INFO,"audio: ");
                                 ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output,1);
                                 av_free_packet(&newapkt);

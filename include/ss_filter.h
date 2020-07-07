@@ -18,7 +18,8 @@ typedef struct
 
 void init_filterMap(filterMap * fM);
 void free_filterMap(filterMap * fM);
-int filting(AVFrame *frame,AVFrame *filt_frame,
-            AVFilterContext *buffersrc_ctx,
-            AVFilterContext *buffersink_ctx);
+//int filting(AVFrame *frame,AVFrame *filt_frame,
+//            AVFilterContext *buffersrc_ctx,
+//            AVFilterContext *buffersink_ctx);
+int filting(AVFrame* filt_frames[], int filt_frame_count, filterMap* filtermap, const AVFrame* frame);
 #endif

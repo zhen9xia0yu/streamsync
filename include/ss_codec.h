@@ -17,8 +17,10 @@ typedef struct
 
 void init_codecMap(codecMap * cm);
 void free_codecMap(codecMap * cm);
-int decode(AVCodecContext *decodec, AVPacket pkt, AVFrame *frame);
-int encode(AVCodecContext *codec, AVFrame *frame, AVPacket *pkt);
+//int decode(AVCodecContext *decodec, AVPacket pkt, AVFrame *frame);
+int decode(AVFrame* frames[], int count, AVCodecContext *decodec, const AVPacket* pkt);
+int encode(AVPacket* pkts[], int pkt_count, AVCodecContext *codec, const AVFrame* frame);
+//int encode(AVCodecContext *codec, AVFrame *frame, AVPacket *pkt);
 int flush_encoder(AVCodecContext *codec, AVFrame *frame, AVPacket *pkt);
 
 #endif

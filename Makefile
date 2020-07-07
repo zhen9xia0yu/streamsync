@@ -3,10 +3,10 @@ CFLAGS = -std=c99 -g -Wall -O
 INCLUDE = -I ${HOME}/.local/include -I./include
 LIBPATH = -L ${HOME}/.local/lib
 LIB = -lpthread -ldl -lavformat -lavcodec -lavutil -lavfilter -lpostproc -lswscale -lswresample -lx264  -lz -lrt
-SRCSALL = $(wildcard src/*.c test/*.c) 
+SRCSALL = $(wildcard src/*.c demo/*.c) 
 OBJSALL = $(patsubst %.c, %.o, $(notdir $(SRCSALL)))
 OBJS = $(patsubst %.c, %.o, $(notdir $(wildcard src/*.c)))
-TARGET = $(patsubst %.c,%,$(notdir $(wildcard test/*.c))) 
+TARGET = $(patsubst %.c,%,$(notdir $(wildcard demo/*.c))) 
 
 all : $(TARGET)
 

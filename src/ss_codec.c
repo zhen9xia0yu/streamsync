@@ -55,25 +55,21 @@ int decode(AVFrame* frames[], int count, AVCodecContext *decodec, const AVPacket
 
     int i;
     for ( i = 0; i < count; i++) {
-        AVFrame* frame = av_frame_alloc();
-        if (!frame) {
-            av_log(NULL,AV_LOG_ERROR,"av_frame_alloc get null\n");
-            return -1;
-        }
+        AVFrame* frame = frames[i];
+        av_frame_unref(frame);
         int ret = avcodec_receive_frame( decodec, frame);
 //      frame->pts = av_frame_get_best_effort_timestamp(frame);
         if (ret == AVERROR(EAGAIN)) {
             av_log(NULL,AV_LOG_DEBUG,"the decoder need more packet\n");
-            return i - 1;
+            return i;
         } else if (ret == AVERROR_EOF) {
             av_log(NULL,AV_LOG_DEBUG,"the decoder is eof\n");
             //avcodec_flush_buffers(decodec);
-            return i - 1;
+            return i;
         } else if (ret < 0) {
             av_log(NULL,AV_LOG_ERROR,"error while receving frame from decoder\n");
             return -1;
         }
-        frames[i] = frame;
     }
     return count;
 }
@@ -91,26 +87,21 @@ int encode(AVPacket* pkts[], int pkt_count, AVCodecContext *codec, const AVFrame
     av_log(NULL,AV_LOG_DEBUG,"send 1 frame to encoder ok\n");
     int i;
     for ( i = 0; i < pkt_count; i++) {
-        AVPacket* packet = av_packet_alloc();
-        if( !packet ) {
-            av_log(NULL,AV_LOG_ERROR,"packet cannot init \n");
-            return -1;
-        }
+        AVPacket* packet = pkts[i];
+        av_packet_unref(packet);
         int ret = avcodec_receive_packet(codec,packet);
         if(ret == AVERROR(EAGAIN)){
             av_log(NULL,AV_LOG_DEBUG,"the encoder need more frames\n");
-            return i - 1;
+            return i;
         }else if(ret == AVERROR_EOF){
             av_log(NULL,AV_LOG_DEBUG,"the encoder is eof\n");
-            return i - 1;
+            return i;
         }
         else if(ret <0){
             av_log(NULL,AV_LOG_ERROR,"error while receive pkt from encoder\n");
             return -1;
         }
-        pkts[i] = packet;
     }
-    av_log(NULL,AV_LOG_DEBUG,"got pkts from encoder\n");
     return pkt_count;
 }
 //int encode(AVCodecContext *codec, AVFrame *frame, AVPacket *pkt){

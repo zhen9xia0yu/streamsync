@@ -4,6 +4,8 @@
 #include <string.h>
 #include "ss_process.h"
 
+#define MAX_PIECE 32
+
 int main(int argc,char **argv){
     int ret,apkt_over,trans_video,vfile_over,afile_over;
     meetPro *meeting;
@@ -73,6 +75,19 @@ int main(int argc,char **argv){
     AVStream *in_stream, *out_stream;
     streamMap *sm_v_main = meeting->video;
     streamMap *sm_a = meeting->audio;
+
+    AVFrame* frames[MAX_PIECE] = {NULL};
+    for (int i = 0; i < MAX_PIECE; i++) {
+        frames[i] = av_frame_alloc();
+    }
+    AVFrame* filt_frames[MAX_PIECE] = {NULL};
+    for (int i = 0; i < MAX_PIECE; i++) {
+        filt_frames[i] = av_frame_alloc();
+    }
+    AVPacket* pkts[MAX_PIECE] = {NULL};
+    for (int i = 0; i < MAX_PIECE; i++) {
+        pkts[i] = av_packet_alloc();
+    }
     //start
     //while(1){
 //        if(av_compare_ts(sm_v_main->cur_pts, sm_v_main->input_fm->fmt_ctx->streams[0]->time_base,
@@ -115,38 +130,36 @@ int main(int argc,char **argv){
                 sm_a->cur_index_pkt_in++;
                 sm_a->cur_pts = apkt.pts;
                 av_packet_rescale_ts( &apkt, in_stream->time_base, in_stream->codec->time_base);
-                AVFrame* frames[16] = {NULL};
-                int frame_count = decode( frames, 16, sm_a->codecmap->dec_ctx, &apkt);
-                av_log(NULL,AV_LOG_DEBUG,"frame_count :%d\n", ( frame_count + 1 ));
-                if (frame_count < 0) {
+                int frame_count = decode( frames, MAX_PIECE, sm_a->codecmap->dec_ctx, &apkt);
+                av_log(NULL,AV_LOG_DEBUG,"frame_count :%d\n", ( frame_count ));
+                if (frame_count <= 0) {
                     // add something
                     break;
                 }
-                for (int i = 0; i <= frame_count; i++) {
-                    AVFrame* filt_frames[16] = {NULL};
-                    int filt_frame_count = filting( filt_frames, 16, sm_a->filtermap, frames[i]);
-                    av_log(NULL,AV_LOG_DEBUG,"filt_frame_count :%d\n", ( filt_frame_count + 1 ));
-                    if(filt_frame_count < 0) {
+                for (int i = 0; i < frame_count; i++) {
+                    int filt_frame_count = filting( filt_frames, MAX_PIECE, sm_a->filtermap, frames[i]);
+                    av_log(NULL,AV_LOG_DEBUG,"filt_frame_count :%d\n", ( filt_frame_count ));
+                    if(filt_frame_count <= 0) {
                         // ???
                         break;
                     }
-                    for (int j = 0; j <= filt_frame_count; j++) {
-                        AVPacket* pkts[16] = {NULL};
-                        int pkt_count = encode( pkts, 16, sm_a->codecmap->codec_ctx, filt_frames[j]);
-                        av_log(NULL,AV_LOG_DEBUG,"pkt_count :%d\n", ( pkt_count + 1 ));
-                        if (pkt_count < 0) {
+                    for (int j = 0; j < filt_frame_count; j++) {
+                        int pkt_count = encode( pkts, MAX_PIECE, sm_a->codecmap->codec_ctx, filt_frames[j]);
+                        av_log(NULL,AV_LOG_DEBUG,"pkt_count :%d\n", ( pkt_count ));
+                        if (pkt_count <= 0) {
                             //???
                             break;
                         }
                         out_stream = meeting->output->fmt_ctx->streams[1];
-                        for (int k = 0; k <= pkt_count; k++) {
+                        for (int k = 0; k < pkt_count; k++) {
                             av_log(NULL,AV_LOG_INFO,"audio: ");
                             ret = write_pkt(pkts[k], in_stream,out_stream, 1, meeting->output, 1);
-                            av_free_packet(pkts[k]);
+                            // ret = ?
+                            //av_packet_unref(pkts[k]);
                         }
-                        av_frame_unref(filt_frames[j]);
+                        //av_frame_unref(filt_frames[j]);
                     }
-                    av_frame_unref(frames[i]);
+                    //av_frame_unref(frames[i]);
                 }
             }
         //}

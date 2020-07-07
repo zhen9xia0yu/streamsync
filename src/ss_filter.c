@@ -50,26 +50,21 @@ int filting(AVFrame* filt_frames[], int filt_frame_count, filterMap* filtermap, 
         return -1;
     }
     av_log(NULL,AV_LOG_DEBUG,"send 1 frame to filter ok\n");
-    int i;
-    for ( i = 0; i < filt_frame_count; i++) {
-        AVFrame* filt_frame = av_frame_alloc();
-        if (!filt_frame) {
-            av_log(NULL,AV_LOG_ERROR,"av_frame_alloc get null\n");
-            return -1;
-        }
+    for (int i = 0; i < filt_frame_count; i++) {
+        AVFrame* filt_frame = filt_frames[i];
+        av_frame_unref(filt_frame);
         int ret = av_buffersink_get_frame(filtermap->buffersink_ctx,filt_frame);
         if(ret == AVERROR(EAGAIN)){
             av_log(NULL,AV_LOG_DEBUG,"the filter need more frame\n");
-            return i - 1;
+            return i;
         }else if(ret == AVERROR_EOF){
             av_log(NULL,AV_LOG_DEBUG,"the filter is eof\n");
-            return i - 1;
+            return i;
         }
         else if(ret < 0){
             av_log(NULL,AV_LOG_ERROR,"error while receive frame from filter\n");
             return -1;
         }
-        filt_frames[i] = filt_frame;
     }
     return filt_frame_count;
 }

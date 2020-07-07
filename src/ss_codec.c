@@ -75,10 +75,6 @@ int decode(AVFrame* frames[], int count, AVCodecContext *decodec, const AVPacket
 }
 
 int encode(AVPacket* pkts[], int pkt_count, AVCodecContext *codec, const AVFrame* frame){
-    if (!frame) {
-        av_log(NULL,AV_LOG_ERROR,"frame has no value\n");
-        return -1;
-    }
     int ret = avcodec_send_frame( codec, frame);
     if(ret < 0){
         av_log(NULL,AV_LOG_ERROR,"error while sending 1 frame to encoder\n");

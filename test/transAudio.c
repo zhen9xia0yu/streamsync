@@ -72,7 +72,7 @@ int main(int argc,char **argv){
     filt_aframe = av_frame_alloc();
     //ready to syncing streams
     AVFormatContext *ifmt_ctx;
-    AVStream *in_stream, *out_stream;
+    //AVStream *in_stream, *out_stream;
     streamMap *sm_v_main = meeting->video;
     streamMap *sm_a = meeting->audio;
 
@@ -150,7 +150,7 @@ int main(int argc,char **argv){
                             //???
                             break;
                         }
-                        out_stream = meeting->output->fmt_ctx->streams[1];
+                        AVStream* out_stream = meeting->output->fmt_ctx->streams[1];
                         for (int k = 0; k < pkt_count; k++) {
                             av_log(NULL,AV_LOG_INFO,"audio: ");
                             ret = write_pkt(pkts[k], in_stream,out_stream, 1, meeting->output, 1);
@@ -159,29 +159,22 @@ int main(int argc,char **argv){
                     }
                 }
             }
-//
-//        in_stream=ifmt_ctx->streams[0];
-//        out_stream=meeting->output->fmt_ctx->streams[1];
-//    for(;;){
-//        av_free_packet(&newapkt);
-//        ret = flush_encoder(sm_a->codecmap->codec_ctx,NULL,&newapkt);
-//        if( ret == AVERROR_EOF )    break;
-//        if( ret == AVERROR(EAGAIN))   continue;
-//        else if(ret<0){
-//            av_log(NULL,AV_LOG_ERROR,"error occured while encode\n");
-//            goto end;
-//        }
-//        else if(ret == 0 )  {
-//            av_log(NULL,AV_LOG_INFO,"audio: ");
-//            ret = write_pkt(&newapkt,in_stream,out_stream,1,meeting->output,1);
-//            av_free_packet(&newapkt);
-//            if(ret<0){
-//                av_log(NULL,AV_LOG_ERROR,"error occured while write 1 apkt\n");
-//                goto end;
-//            }
-//        }
-//    }
 
+    //flush encoder
+    int pkt_count = encode( pkts, MAX_PIECE, sm_a->codecmap->codec_ctx, NULL);
+    av_log(NULL,AV_LOG_DEBUG,"pkt_count :%d\n", ( pkt_count ));
+    if (pkt_count > 0) {
+        AVStream* in_stream = ifmt_ctx->streams[0];
+        AVStream* out_stream = meeting->output->fmt_ctx->streams[1];
+        for (int i = 0; i < pkt_count; i++) {
+            av_log(NULL,AV_LOG_INFO,"audio: ");
+            ret = write_pkt(pkts[i], in_stream,out_stream, 1, meeting->output, 1);
+            if(ret<0){
+                av_log(NULL,AV_LOG_ERROR,"error occured while write 1 apkt\n");
+                goto end;
+            }
+        }
+    }
     av_write_trailer(meeting->output->fmt_ctx);
 end:
     free_meetPro(meeting);

@@ -33,8 +33,8 @@ int main(int argc,char **argv){
     meeting->video->input_fm->filename=argv[1];
     meeting->audio->input_fm->filename=argv[2];
     meeting->output->filename=argv[3];
-    meeting->audio->filtermap->descr="aresample=44100";
-    //meeting->audio->filtermap->descr="aresample=8000";
+    //meeting->audio->filtermap->descr="aresample=44100";
+    meeting->audio->filtermap->descr="aresample=8000";
     meeting->video->cur_pts=0;
     meeting->video->cur_index_pkt_in=0;
     meeting->audio->cur_pts=0;

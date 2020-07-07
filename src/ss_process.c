@@ -70,10 +70,10 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id,const char 
         cm->codec_ctx->sample_fmt=AV_SAMPLE_FMT_FLTP;
         cm->codec_ctx->bit_rate=meeting->audio->input_fm->fmt_ctx->streams[0]->codec->bit_rate;
        // av_dict_set(&cm->opts,"b","8000",0);
-        cm->codec_ctx->sample_rate=44100;//flv:aac supported only
-        //cm->codec_ctx->sample_rate=8000;//flv:aac supported only
-        //cm->codec_ctx->channel_layout=AV_CH_LAYOUT_MONO;
-        cm->codec_ctx->channel_layout=AV_CH_LAYOUT_STEREO;//flv :aac supported only, 1
+        //cm->codec_ctx->sample_rate=44100;//flv:aac supported only
+        cm->codec_ctx->sample_rate=8000;//flv:aac supported only
+        cm->codec_ctx->channel_layout=AV_CH_LAYOUT_MONO;
+        //cm->codec_ctx->channel_layout=AV_CH_LAYOUT_STEREO;//flv :aac supported only, 1
         cm->codec_ctx->channels=av_get_channel_layout_nb_channels(cm->codec_ctx->channel_layout);
         cm->codec_ctx->time_base = (AVRational){1, cm->codec_ctx->sample_rate};
         meeting->output->fmt_ctx->streams[1]->time_base=cm->codec_ctx->time_base;

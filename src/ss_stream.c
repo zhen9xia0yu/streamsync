@@ -195,8 +195,8 @@ int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,int stream_
     else   av_packet_rescale_ts(pkt,in_stream->time_base,out_stream->time_base);
     pkt->pos = -1;
     pkt->stream_index=stream_index;
-    av_log(NULL,AV_LOG_DEBUG,"\nfinal pktpts=%"PRId64" outstream showpts = %lf \n",pkt->pts,pkt->pts*av_q2d(out_stream->time_base));
     av_log(NULL,AV_LOG_INFO,"write 1 pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
+    av_log(NULL,AV_LOG_DEBUG,"final pktpts=%"PRId64" outstream showpts = %lf \n",pkt->pts,pkt->pts*av_q2d(out_stream->time_base));
     if (av_interleaved_write_frame(fm->fmt_ctx,pkt) < 0) {
         av_log(NULL,AV_LOG_ERROR, "Error write packet\n");
         return -1;

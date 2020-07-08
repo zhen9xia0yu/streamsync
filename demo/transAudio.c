@@ -201,6 +201,15 @@ int main(int argc,char **argv){
         }
     }
     av_write_trailer(meeting->output->fmt_ctx);
+
+    //free
+    av_packet_free(&pkt);
+    for (int i = 0; i < MAX_PIECE; i++) {
+        av_frame_free(&frames[i]);
+        av_frame_free(&filt_frames[i]);
+        av_packet_free(&pkts[i]);
+    }
+
 end:
     free_codecMap(meeting->audio->codecmap);
     free_meetPro(meeting);

@@ -13,12 +13,6 @@ int pts_small(const streamMap* a, const streamMap* b) {
 }
 
 int main(int argc,char **argv){
-    int ret,apkt_over,trans_video,vfile_over,afile_over;
-    meetPro *meeting;
-    AVFrame *aframe,*filt_aframe;
-
-//        av_log(NULL,AV_LOG_ERROR,"eagain = %d ,eof = %d\n",AVERROR(EAGAIN),AVERROR_EOF);
-
     if(argc!=4){
         av_log(NULL,AV_LOG_ERROR,"usage: %s <input video file> <input audio file> <output file>\n",argv[0]);
         return -1;
@@ -27,6 +21,7 @@ int main(int argc,char **argv){
     av_log_set_level(AV_LOG_DEBUG);
     av_register_all();
     avformat_network_init();
+    meetPro *meeting;
     meeting = (meetPro *) calloc(1,sizeof(meetPro));
     init_meetPro(meeting);
     //setting default values
@@ -44,15 +39,14 @@ int main(int argc,char **argv){
     av_dict_set(&meeting->video->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
     av_dict_set(&meeting->audio->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
     const char * bitrate="2500k";
-    vfile_over=0;
-    afile_over=0;
+    int ret;
     //set input
     if((ret = set_inputs(meeting))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set inputs.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set inputs\n");
     //set output & encoders
-    trans_video=0;
+    int trans_video = 0;
     if((ret = set_outputs(meeting,trans_video,bitrate))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set outputs.\n");
         goto end;
@@ -70,9 +64,6 @@ int main(int argc,char **argv){
         av_log(NULL,AV_LOG_ERROR,"could not init audio filter.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed init filter: audio\n");
-    // add null test
-    aframe = av_frame_alloc();
-    filt_aframe = av_frame_alloc();
     //ready to syncing streams
     AVFormatContext *ifmt_ctx;
     //AVStream *in_stream, *out_stream;

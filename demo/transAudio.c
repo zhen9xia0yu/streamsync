@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ss_process.h"
+#include <time.h>
+#include <sys/time.h>
 
 #define MAX_PIECE 32
 
@@ -10,6 +12,23 @@ int pts_small(const streamMap* a, const streamMap* b) {
         int comp = av_compare_ts(a->cur_pts, a->input_fm->fmt_ctx->streams[0]->time_base,
                                  b->cur_pts, b->input_fm->fmt_ctx->streams[0]->time_base);
         return comp <= 0;
+}
+
+int print_time_sec(void){
+
+    struct tm *p;
+    struct timeval tv;
+    gettimeofday( &tv, NULL );
+    p = gmtime( &tv.tv_sec );
+    av_log(NULL,AV_LOG_INFO,"[%d-", 1900 + p->tm_year);
+    av_log(NULL,AV_LOG_INFO,"%d-", 1 + p->tm_mon);
+    av_log(NULL,AV_LOG_INFO,"%d ", p->tm_mday);
+    av_log(NULL,AV_LOG_INFO,"%d:", 8 + p->tm_hour);
+    av_log(NULL,AV_LOG_INFO,"%d:", p->tm_min);
+    av_log(NULL,AV_LOG_INFO,"%d ", p->tm_sec);
+    av_log(NULL,AV_LOG_INFO,"%d] ",tv.tv_usec );
+    return 0;
+
 }
 
 int main(int argc,char **argv){
@@ -113,6 +132,7 @@ int main(int argc,char **argv){
             if (pkt->stream_index!=0) {
                 continue;
             }
+            print_time_sec();
             av_log(NULL,AV_LOG_DEBUG,"\nread video packet index: %d\n", sm_v_main->cur_index_pkt_in);
             av_log(NULL,AV_LOG_INFO,"read 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
             AVStream* in_stream = ifmt_ctx->streams[0];
@@ -124,6 +144,7 @@ int main(int argc,char **argv){
             av_log(NULL,AV_LOG_INFO,"after set pts, video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
             sm_v_main->cur_index_pkt_in++;
             sm_v_main->cur_pts=pkt->pts;
+            print_time_sec();
             av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", meeting->video->cur_index_pkt_out);
             meeting->video->cur_index_pkt_out++;
             AVStream* out_stream = meeting->output->fmt_ctx->streams[0];
@@ -144,6 +165,7 @@ int main(int argc,char **argv){
             if (pkt->stream_index!=0) {
                 continue;
             }
+            print_time_sec();
             av_log(NULL,AV_LOG_DEBUG,"\nread audio packet index: %d\n", sm_a->cur_index_pkt_in);
             av_log(NULL,AV_LOG_INFO,"read 1 audio pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
             AVStream* in_stream = ifmt_ctx->streams[0];
@@ -174,6 +196,7 @@ int main(int argc,char **argv){
                         break;
                     }
                     for (int k = 0; k < pkt_count; k++) {
+                        print_time_sec();
                         av_log(NULL,AV_LOG_INFO,"audio: the output packet index: %d ", meeting->audio->cur_index_pkt_out);
                         meeting->audio->cur_index_pkt_out++;
                         ret = write_pkt(pkts[k], in_stream,out_stream, 1, meeting->output, 1);
@@ -211,6 +234,8 @@ int main(int argc,char **argv){
     }
 
 end:
+
+
     free_codecMap(meeting->audio->codecmap);
     free_meetPro(meeting);
     free(meeting);

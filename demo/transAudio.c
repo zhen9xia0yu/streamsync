@@ -236,6 +236,8 @@ int main(int argc,char **argv){
 end:
 
 
+    avformat_close_input(&meeting->video->input_fm->fmt_ctx);
+    avformat_close_input(&meeting->audio->input_fm->fmt_ctx);
     free_codecMap(meeting->audio->codecmap);
     free_meetPro(meeting);
     free(meeting);

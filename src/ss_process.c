@@ -20,28 +20,34 @@ void free_meetPro(meetPro * mp){
 
 int set_inputs(meetPro * meeting){
     int ret;
-    meeting->video->input_fm->fmt_ctx=NULL;
-    meeting->audio->input_fm->fmt_ctx=NULL;
-    if ((ret = avformat_open_input(&meeting->video->input_fm->fmt_ctx, meeting->video->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
-        av_log(NULL,AV_LOG_ERROR,"Could not open input video file.\n");
-        return ret;
+    if(meeting->video->input_fm->filename !=""){
+    	meeting->video->input_fm->fmt_ctx=NULL; 
+	if ((ret = avformat_open_input(&meeting->video->input_fm->fmt_ctx, meeting->video->input_fm->filename, 0, &meeting->video->input_fm->ops)) < 0) {
+    	    av_log(NULL,AV_LOG_ERROR,"Could not open input video file.\n");
+    	    return ret;
+    	}
+   	if ((ret = avformat_find_stream_info(meeting->video->input_fm->fmt_ctx, 0)) < 0) {
+   	    av_log(NULL,AV_LOG_ERROR, "Failed to retrieve input video stream information\n");
+   	    return ret;
+   	}
+    	av_log(NULL,AV_LOG_INFO,"===========Input Video Information==========\n");
+    	av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
+    	av_log(NULL,AV_LOG_INFO,"============================================\n");
     }
-    if ((ret = avformat_open_input(&meeting->audio->input_fm->fmt_ctx, meeting->audio->input_fm->filename, 0, &meeting->audio->input_fm->ops)) < 0) {
-        av_log(NULL,AV_LOG_ERROR, "Could not open input audio file.\n");
-        return ret;
+    if(meeting->audio->input_fm->filename !=""){
+    	meeting->audio->input_fm->fmt_ctx=NULL;
+    	if ((ret = avformat_open_input(&meeting->audio->input_fm->fmt_ctx, meeting->audio->input_fm->filename, 0, &meeting->audio->input_fm->ops)) < 0) {
+    	    av_log(NULL,AV_LOG_ERROR,"Could not open input audio file.\n");
+    	    return ret;
+    	}
+   	if ((ret = avformat_find_stream_info(meeting->audio->input_fm->fmt_ctx, 0)) < 0) {
+   	    av_log(NULL,AV_LOG_ERROR, "Failed to retrieve input audio stream information\n");
+   	    return ret;
+   	}
+    	av_log(NULL,AV_LOG_INFO,"===========Input Audio Information==========\n");
+    	av_dump_format(meeting->audio->input_fm->fmt_ctx, 0, meeting->audio->input_fm->filename, 0);
+    	av_log(NULL,AV_LOG_INFO,"============================================\n");
     }
-    if ((ret = avformat_find_stream_info(meeting->video->input_fm->fmt_ctx, 0)) < 0) {
-        av_log(NULL,AV_LOG_ERROR, "Failed to retrieve input video stream information\n");
-        return ret;
-    }
-    if ((ret = avformat_find_stream_info(meeting->audio->input_fm->fmt_ctx, 0)) < 0) {
-        av_log(NULL,AV_LOG_ERROR, "Failed to retrieve input audio stream information\n");
-        return ret;
-    }
-    av_log(NULL,AV_LOG_INFO,"===========Input Information==========\n");
-    av_dump_format(meeting->video->input_fm->fmt_ctx, 0, meeting->video->input_fm->filename, 0);
-    av_dump_format(meeting->audio->input_fm->fmt_ctx, 0, meeting->audio->input_fm->filename, 0);
-    av_log(NULL,AV_LOG_INFO,"======================================\n");
     return 0;
 }
 

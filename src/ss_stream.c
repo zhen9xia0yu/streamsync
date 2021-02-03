@@ -68,10 +68,11 @@ int init_filters(streamMap * stream){
             ret = av_opt_set_bin(stream->filtermap->buffersink_ctx,"pix_fmts",
                         (uint8_t*)&codec_v_main_ctx->pix_fmt,sizeof(codec_v_main_ctx->pix_fmt),
                         AV_OPT_SEARCH_CHILDREN);
+	
             if(ret<0){
                 av_log(NULL,AV_LOG_ERROR,"cannot set output pixel format.\n");
                 return ret;
-            }
+            } else av_log(NULL,AV_LOG_DEBUG,"successed set output pixel format.\n");
             break;
         case AVMEDIA_TYPE_AUDIO:
             type = 1;

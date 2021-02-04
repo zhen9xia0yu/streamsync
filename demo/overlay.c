@@ -91,7 +91,46 @@ int main( int argc, char **argv){
 	    av_log(NULL,AV_LOG_ERROR,"could not init video filter.\n");
 	    goto end;
 	}else   av_log(NULL,AV_LOG_DEBUG,"successed init filter: video\n");
+	
+	/*prepare media data horizen*/
+	AVFrame* frames[MAX_PIECE] = {NULL};
+	for (int i = 0; i < MAX_PIECE; i++) {
+	    frames[i] = av_frame_alloc();
+	}
+	AVFrame* filt_frames[MAX_PIECE] = {NULL};
+	for (int i = 0; i < MAX_PIECE; i++) {
+	    filt_frames[i] = av_frame_alloc();
+	}
+	AVPacket* pkts[MAX_PIECE] = {NULL};
+	for (int i = 0; i < MAX_PIECE; i++) {
+	    pkts[i] = av_packet_alloc();
+	}
 
+	/*ready to overlay*/
+	streamMap 	*sm_v     = meeting->video;
+	AVFormatContext *ifmt_ctx = sm_v->input_fm->fmt_ctx;
+	AVPacket 	*pkt      = av_packet_alloc();
+
+	while(1){
+		av_packet_unref(pkt);
+		if((ret = av_read_frame(ifmt_ctx, pkt))<0)	break;
+		else{
+			if(pkt->stream_index != 0)	continue;
+
+			/*record input index & pts*/
+			print_time_sec();
+			av_log(NULL,AV_LOG_DEBUG,"\nread video packet index: %d\n", sm_v->cur_index_pkt_in);
+            		av_log(NULL,AV_LOG_INFO,"read 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
+            		AVStream* in_stream = ifmt_ctx->streams[0];
+            		sm_v->cur_index_pkt_in++;
+            		sm_v->cur_pts = pkt->pts;
+            		av_packet_rescale_ts( pkt, in_stream->time_base, in_stream->codec->time_base);
+ 
+
+
+				
+		}
+	}
 
 end:
 	avformat_close_input(&meeting->video->input_fm->fmt_ctx);
@@ -105,50 +144,7 @@ end:
 	return 0;
 }
 
-//    int ret;
-//    //set input
-//    if((ret = set_inputs(meeting))<0){
-//        av_log(NULL,AV_LOG_ERROR,"error occred while set inputs.\n");
-//        goto end;
-//    }else   av_log(NULL,AV_LOG_DEBUG,"successed set inputs\n");
-//    //set output & encoders
-//    int trans_video = 0;
-//    if((ret = set_outputs(meeting,trans_video,bitrate))<0){
-//        av_log(NULL,AV_LOG_ERROR,"error occred while set outputs.\n");
-//        goto end;
-//    }else   av_log(NULL,AV_LOG_DEBUG,"successed set outputs.\n");
-//   //set decoders
-//    if((ret = set_decoder(meeting->audio,0))<0){
-//        av_log(NULL,AV_LOG_ERROR,"error occurred when open audio decodec.\n");
-//        goto end;
-//    }else   av_log(NULL,AV_LOG_DEBUG,"sucessed set decoder: audio\n");
-//    av_log(NULL,AV_LOG_DEBUG,"dec_a->samplerate=%d\n",meeting->audio->codecmap->dec_ctx->sample_rate);
-//    av_log(NULL,AV_LOG_DEBUG,"codec_a->samplerate=%d\n",meeting->audio->codecmap->codec_ctx->sample_rate);
-//    av_log(NULL,AV_LOG_DEBUG,"ifmt->samplerate=%d\n",meeting->audio->input_fm->fmt_ctx->streams[0]->codec->sample_rate);
-//    //init filters
-//    if(init_filters(meeting->audio)<0){
-//        av_log(NULL,AV_LOG_ERROR,"could not init audio filter.\n");
-//        goto end;
-//    }else   av_log(NULL,AV_LOG_DEBUG,"successed init filter: audio\n");
-//    //ready to syncing streams
-//    AVFormatContext *ifmt_ctx;
-//    //AVStream *in_stream, *out_stream;
-//    streamMap *sm_v_main = meeting->video;
-//    streamMap *sm_a = meeting->audio;
-//
-//    AVFrame* frames[MAX_PIECE] = {NULL};
-//    for (int i = 0; i < MAX_PIECE; i++) {
-//        frames[i] = av_frame_alloc();
-//    }
-//    AVFrame* filt_frames[MAX_PIECE] = {NULL};
-//    for (int i = 0; i < MAX_PIECE; i++) {
-//        filt_frames[i] = av_frame_alloc();
-//    }
-//    AVPacket* pkts[MAX_PIECE] = {NULL};
-//    for (int i = 0; i < MAX_PIECE; i++) {
-//        pkts[i] = av_packet_alloc();
-//    }
-//
+
 //
 ////    processes = [audio_process, video_process, subtitle_process];
 ////    while (true) {

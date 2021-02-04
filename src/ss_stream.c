@@ -59,8 +59,14 @@ int init_filters(streamMap * stream){
                 av_log(NULL,AV_LOG_ERROR,"cannot create buffer source\n");
                 return ret;
             } else av_log(NULL,AV_LOG_DEBUG,"successed create buffer source\n");
+	    /*add buffersink_params->pixel_fmts*/
+         	enum AVPixelFormat pix_fmts[] = {AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE };
+         	AVBufferSinkParams *buffersink_params;
+         	buffersink_params = av_buffersink_params_alloc();
+         	buffersink_params->pixel_fmts = pix_fmts;
             ret = avfilter_graph_create_filter(&stream->filtermap->buffersink_ctx,buffersink,"out",
-                                       NULL,NULL,stream->filtermap->filter_graph);
+                                       //NULL,NULL,stream->filtermap->filter_graph);
+                                       NULL,buffersink_params,stream->filtermap->filter_graph);
             if(ret<0){
                 av_log(NULL,AV_LOG_ERROR,"cannot create buffer sink\n");
                 return ret;

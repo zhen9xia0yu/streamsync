@@ -122,9 +122,11 @@ int main( int argc, char **argv){
 			av_log(NULL,AV_LOG_DEBUG,"\nread video packet index: %d\n", sm_v->cur_index_pkt_in);
             		av_log(NULL,AV_LOG_INFO,"read 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
             		AVStream* in_stream = ifmt_ctx->streams[0];
+            ret = set_pts(pkt,in_stream,sm_v->cur_index_pkt_in);
+            		av_log(NULL,AV_LOG_INFO,"read 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
             		sm_v->cur_index_pkt_in++;
             		sm_v->cur_pts = pkt->pts;
-            		av_packet_rescale_ts( pkt, in_stream->time_base, in_stream->codec->time_base);
+            		//av_packet_rescale_ts( pkt, in_stream->time_base, in_stream->codec->time_base);
 
 			/*got franmes from decodec*/
             		int frame_count = decode( frames, MAX_PIECE, sm_v->codecmap->dec_ctx, pkt);
@@ -134,9 +136,51 @@ int main( int argc, char **argv){
             			av_log(NULL,AV_LOG_DEBUG,"frame_count<=0,decodec need more packets.\n");
             		    	continue;
             		}
-				
+			
+			/*make frames filting*/
+			for (int i = 0; i < frame_count; i++) {
+				av_log(NULL,AV_LOG_DEBUG,"got 1 frame->pts=%"PRId64" instream_codec  showpts = %lf  frame->nb_samples=%d\n",frames[i]->pts,frames[i]->pts*av_q2d(in_stream->codec->time_base),frames[i]->nb_samples);
+			        int filt_frame_count = filting( filt_frames, MAX_PIECE, sm_v->filtermap, frames[i]);
+			        av_log(NULL,AV_LOG_DEBUG,"filt_frame_count :%d\n", ( filt_frame_count ));
+			        if(filt_frame_count <= 0) {
+			                    // ???
+            				av_log(NULL,AV_LOG_DEBUG,"filt_frame_count<=0,filter need more frames.\n");
+			                break;
+			        } 
+
+                for (int j = 0; j < filt_frame_count; j++) {
+                    AVStream* out_stream = meeting->output->fmt_ctx->streams[0];
+                    av_log(NULL,AV_LOG_DEBUG,"got 1 filt_frame->pts=%"PRId64" outstream_codec showpts = %lf filt_frame->nb_samples=%d\n",filt_frames[j]->pts,filt_frames[j]->pts*av_q2d(out_stream->codec->time_base),filt_frames[i]->nb_samples);
+                    int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, filt_frames[j]);
+                    av_log(NULL,AV_LOG_DEBUG,"pkt_count :%d\n", ( pkt_count ));
+                    if (pkt_count <= 0) {
+                        //???
+                        break;
+                    }
+                    for (int k = 0; k < pkt_count; k++) {
+                        print_time_sec();
+                        av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", meeting->video->cur_index_pkt_out);
+                        meeting->video->cur_index_pkt_out++;
+                        ret = write_pkt(pkts[k], in_stream,out_stream, 0, meeting->output, 0);
+                        // ret = ?
+                    }
+                }
+
+
+			}		
 		}
 	}
+
+	av_write_trailer(meeting->output->fmt_ctx);
+
+	/*free*/
+    av_packet_free(&pkt);
+    for (int i = 0; i < MAX_PIECE; i++) {
+        av_frame_free(&frames[i]);
+        av_frame_free(&filt_frames[i]);
+        av_packet_free(&pkts[i]);
+    }
+
 
 end:
 	avformat_close_input(&meeting->video->input_fm->fmt_ctx);

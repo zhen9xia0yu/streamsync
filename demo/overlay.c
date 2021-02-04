@@ -125,9 +125,15 @@ int main( int argc, char **argv){
             		sm_v->cur_index_pkt_in++;
             		sm_v->cur_pts = pkt->pts;
             		av_packet_rescale_ts( pkt, in_stream->time_base, in_stream->codec->time_base);
- 
 
-
+			/*got franmes from decodec*/
+            		int frame_count = decode( frames, MAX_PIECE, sm_v->codecmap->dec_ctx, pkt);
+            		av_log(NULL,AV_LOG_DEBUG,"frame_count :%d\n", ( frame_count ));
+            		if (frame_count <= 0) {
+            		    // add something
+            			av_log(NULL,AV_LOG_DEBUG,"frame_count<=0,decodec need more packets.\n");
+            		    	continue;
+            		}
 				
 		}
 	}

@@ -51,8 +51,9 @@ int main( int argc, char **argv){
 	/*setting values*/
 	meeting->video->input_fm->filename	= argv[1];
 	meeting->audio->input_fm->filename	= "";
-	//meeting->video->filtermap->descr	= "movie=logo.png[wm];[in][wm]overlay=5:5[out]";
-	meeting->video->filtermap->descr	= "null";
+	meeting->video->filtermap->descr	= "movie=logo.png[wm];[in][wm]overlay=5:5[out]";
+	//meeting->video->filtermap->descr	= "movie=555.h264[wm];[in][wm]overlay=5:5[out]";
+	//meeting->video->filtermap->descr	= "null";
 	//meeting->video->filtermap->descr	= "scale=78:24,transpose=cclock";
 	meeting->output->filename		= argv[2];
 	meeting->video->cur_pts			= 0;

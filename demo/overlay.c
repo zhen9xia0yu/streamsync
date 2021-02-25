@@ -124,16 +124,21 @@ int main( int argc, char **argv){
             		AVStream* in_stream = ifmt_ctx->streams[0];
 
 			/*set h264 pkt pts*/
-            		ret = set_pts(pkt,in_stream,sm_v->cur_index_pkt_in);
-			if(ret<0){
-			   av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
-			   goto end;
+			if(pkt->pts == AV_NOPTS_VALUE){
+            			ret = set_pts(pkt,in_stream,sm_v->cur_index_pkt_in);
+				if(ret<0){
+				   av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
+				   goto end;
+				}
+				av_log(NULL,AV_LOG_INFO,"after set pts, video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
 			}
-			av_log(NULL,AV_LOG_INFO,"after set pts, video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
             		sm_v->cur_index_pkt_in++;
             		sm_v->cur_pts = pkt->pts;
-            		//av_packet_rescale_ts( pkt, in_stream->time_base, in_stream->codec->time_base);
-            		//av_log(NULL,AV_LOG_INFO,"after rescale, then 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
+
+    av_log(NULL,AV_LOG_DEBUG,"in_stream_codec->time_base: %d/%d  \n",in_stream->codec->time_base.num,in_stream->codec->time_base.den);
+
+            		av_packet_rescale_ts( pkt, in_stream->time_base, in_stream->codec->time_base);
+            		av_log(NULL,AV_LOG_INFO,"after rescale, then 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
 			/*got franmes from decodec*/
             		int frame_count = decode( frames, MAX_PIECE, sm_v->codecmap->dec_ctx, pkt);
             		av_log(NULL,AV_LOG_DEBUG,"frame_count :%d\n", ( frame_count ));
@@ -158,6 +163,9 @@ int main( int argc, char **argv){
                     AVStream* out_stream = meeting->output->fmt_ctx->streams[0];
                     //av_log(NULL,AV_LOG_DEBUG,"got 1 filt_frame->pts=%"PRId64" outstream_codec showpts = %lf filt_frame->nb_samples=%d\n",filt_frames[j]->pts,filt_frames[j]->pts*av_q2d(out_stream->codec->time_base),filt_frames[i]->nb_samples);
                     //int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, filt_frames[j]);
+
+			frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
+
                     int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, frames[i]);
                     av_log(NULL,AV_LOG_DEBUG,"pkt_count :%d\n", ( pkt_count ));
                     if (pkt_count <= 0) {
@@ -168,7 +176,7 @@ int main( int argc, char **argv){
                         print_time_sec();
                         av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", meeting->video->cur_index_pkt_out);
                         meeting->video->cur_index_pkt_out++;
-                        ret = write_pkt(pkts[k], in_stream,out_stream, 0, meeting->output, 0);
+                        ret = write_pkt(pkts[k], in_stream,out_stream, 0, meeting->output, 1);
                         // ret = ?
                     }
                // }

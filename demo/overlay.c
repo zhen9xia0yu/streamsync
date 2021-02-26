@@ -151,37 +151,40 @@ int main( int argc, char **argv){
 			/*make frames filting*/
 			for (int i = 0; i < frame_count; i++) {
 				av_log(NULL,AV_LOG_DEBUG,"got 1 frame->pts=%"PRId64" instream_codec  showpts = %lf  frame->nb_samples=%d\n",frames[i]->pts,frames[i]->pts*av_q2d(in_stream->codec->time_base),frames[i]->nb_samples);
-//			        int filt_frame_count = filting( filt_frames, MAX_PIECE, sm_v->filtermap, frames[i]);
-//			        av_log(NULL,AV_LOG_DEBUG,"filt_frame_count :%d\n", ( filt_frame_count ));
-//			        if(filt_frame_count <= 0) {
-//			                    // ???
-//            				av_log(NULL,AV_LOG_DEBUG,"filt_frame_count<=0,filter need more frames.\n");
-//			                break;
-//			        } 
-//
-//                for (int j = 0; j < filt_frame_count; j++) {
-                    AVStream* out_stream = meeting->output->fmt_ctx->streams[0];
-                    //av_log(NULL,AV_LOG_DEBUG,"got 1 filt_frame->pts=%"PRId64" outstream_codec showpts = %lf filt_frame->nb_samples=%d\n",filt_frames[j]->pts,filt_frames[j]->pts*av_q2d(out_stream->codec->time_base),filt_frames[i]->nb_samples);
-                    //int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, filt_frames[j]);
 
-			frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
+				/*refresh frame pts*/
+				frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
+				
+			        int filt_frame_count = filting( filt_frames, MAX_PIECE, sm_v->filtermap, frames[i]);
+			        av_log(NULL,AV_LOG_DEBUG,"filt_frame_count :%d\n", ( filt_frame_count ));
+			        if(filt_frame_count <= 0) {
+			                    // ???
+            				av_log(NULL,AV_LOG_DEBUG,"filt_frame_count<=0,filter need more frames.\n");
+			                break;
+			        } 
 
-                    int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, frames[i]);
-                    av_log(NULL,AV_LOG_DEBUG,"pkt_count :%d\n", ( pkt_count ));
-                    if (pkt_count <= 0) {
-                        //???
-                        break;
-                    }
-                    for (int k = 0; k < pkt_count; k++) {
-                        print_time_sec();
-                        av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", meeting->video->cur_index_pkt_out);
-                        meeting->video->cur_index_pkt_out++;
-                        ret = write_pkt(pkts[k], in_stream,out_stream, 0, meeting->output, 1);
-                        // ret = ?
-                    }
-               // }
-
-
+                		for (int j = 0; j < filt_frame_count; j++) {
+					AVStream* out_stream = meeting->output->fmt_ctx->streams[0];
+                		    	av_log(NULL,AV_LOG_DEBUG,"got 1 filt_frame->pts=%"PRId64" outstream_codec showpts = %lf filt_frame->nb_samples=%d\n",filt_frames[j]->pts,filt_frames[j]->pts*av_q2d(out_stream->codec->time_base),filt_frames[j]->nb_samples);
+				    	/*refresh pts*/
+				    	//frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
+				    	//filt_frames[j]->pts = av_frame_get_best_effort_timestamp(filt_frames[j]);
+				    	/*make frames encode*/
+                		    	int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, filt_frames[j]);
+                		    	//int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, frames[i]);
+                		    	av_log(NULL,AV_LOG_DEBUG,"pkt_count :%d\n", ( pkt_count ));
+                		    	if (pkt_count <= 0) {
+                		    	    //???
+                		    	    break;
+                		    	}
+                		    	for (int k = 0; k < pkt_count; k++) {
+                		    	    print_time_sec();
+                		    	    av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", meeting->video->cur_index_pkt_out);
+                		    	    meeting->video->cur_index_pkt_out++;
+                		    	    ret = write_pkt(pkts[k], in_stream,out_stream, 0, meeting->output, 1);
+                		    	    // ret = ?
+                		    	}
+                		}
 			}		
 		}
 	}

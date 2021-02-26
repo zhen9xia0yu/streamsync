@@ -3,7 +3,8 @@
 void init_filterMap(filterMap * fM){
     fM->buffersrc_ctx = (AVFilterContext *) calloc(1,sizeof(AVFilterContext));
     fM->buffersink_ctx = (AVFilterContext *) calloc(1,sizeof(AVFilterContext));
-    fM->filter_graph = (AVFilterGraph *) calloc(1,sizeof(AVFilterGraph));
+    //fM->filter_graph = (AVFilterGraph *) calloc(1,sizeof(AVFilterGraph));
+    fM->filter_graph = avfilter_graph_alloc();
 }
 
 void free_filterMap(filterMap * fM){

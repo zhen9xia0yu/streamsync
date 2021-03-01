@@ -148,7 +148,7 @@ int main( int argc, char **argv){
             		    	continue;
             		}
 			
-			/*make frames filting*/
+			/*make frames encode*/
 			for (int i = 0; i < frame_count; i++) {
 				av_log(NULL,AV_LOG_DEBUG,"got 1 frame->pts=%"PRId64" instream_codec  showpts = %lf  frame->nb_samples=%d\n",frames[i]->pts,frames[i]->pts*av_q2d(in_stream->codec->time_base),frames[i]->nb_samples);
                    		AVStream* out_stream = meeting->output->fmt_ctx->streams[0];

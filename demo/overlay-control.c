@@ -55,9 +55,9 @@ int main( int argc, char **argv){
 	//meeting->video->filtermap->descr	= "movie=dog.gif[wm];[in][wm]overlay=5:5[out]";
 	//meeting->video->filtermap->descr	= "movie=rocket.gif[wm];[in][wm]overlay=5:5[out]";
 	//meeting->video->filtermap->descr	= "movie=rocket.gif[wm];[in][wm]overlay=(man_w-overlay_w)/2:(main_h-overlay_h)/2[out]";
-	//meeting->video->filtermap->descr	= "movie=logo_178x52.png[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
-	//meeting->video->filtermap->descr	= "movie=rocket.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
-	meeting->video->filtermap->descr	= "movie=minibanana.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
+	//meeting->video->filtermap->descr	= "movie=logo.png[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
+	meeting->video->filtermap->descr	= "movie=rocket.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
+	//meeting->video->filtermap->descr	= "movie=minibanana.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
 	//meeting->video->filtermap->descr	= "boxblur";
 	//meeting->video->filtermap->descr	= "hflip";
 	//meeting->video->filtermap->descr	= "movie=555.h264[wm];[in][wm]overlay=5:5[out]";
@@ -118,6 +118,7 @@ int main( int argc, char **argv){
 	streamMap 	*sm_v     = meeting->video;
 	AVFormatContext *ifmt_ctx = sm_v->input_fm->fmt_ctx;
 	AVPacket 	*pkt      = av_packet_alloc();
+	int64_t		overlayed1stFrame_pts;
 
 	while(1){
 		av_packet_unref(pkt);
@@ -156,13 +157,26 @@ int main( int argc, char **argv){
             		    	continue;
             		}
 
+			/*overlay生效时间段*/
 			if(sm_v->cur_index_pkt_in >= 100 && sm_v->cur_index_pkt_in <= 200){
+			//if( sm_v->cur_index_pkt_in <= 100){
 				/*make frames filting*/
 				for (int i = 0; i < frame_count; i++) {
 					av_log(NULL,AV_LOG_DEBUG,"got 1 frame->pts=%"PRId64" instream_codec  showpts = %lf  frame->nb_samples=%d\n",frames[i]->pts,frames[i]->pts*av_q2d(in_stream->codec->time_base),frames[i]->nb_samples);
 
+					av_log(NULL,AV_LOG_DEBUG,">>>>>>>>start overlay<<<<<<<<\n");
+					av_log(NULL,AV_LOG_DEBUG,">>>>>>>>index_pkt_in : %d<<<<<<<<\n",sm_v->cur_index_pkt_in);
 					/*refresh frame pts*/
 					frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
+
+					/*adjust the frame pts to sync with gif pts*/
+					if (sm_v->cur_index_pkt_in == 100{//must synced with the filter's effeciently time
+						overlayed1stFrame_pts = frames[i]->pts;
+						av_log(NULL,AV_LOG_DEBUG,">>>>>>>>overlayed1st frame pts : %"PRId64"<<<<<<<<\n",overlayed1stFrame_pts);
+					}	
+					frames[i]->pts -= overlayed1stFrame_pts;
+					av_log(NULL,AV_LOG_DEBUG,">>>>>>>>new pts : %"PRId64"<<<<<<<<\n",frames[i]->pts);
+					
 					
 				        int filt_frame_count = filting( filt_frames, MAX_PIECE, sm_v->filtermap, frames[i]);
 				        av_log(NULL,AV_LOG_DEBUG,"filt_frame_count :%d\n", ( filt_frame_count ));
@@ -177,7 +191,7 @@ int main( int argc, char **argv){
                 			    	av_log(NULL,AV_LOG_DEBUG,"got 1 filt_frame->pts=%"PRId64" outstream_codec showpts = %lf filt_frame->nb_samples=%d\n",filt_frames[j]->pts,filt_frames[j]->pts*av_q2d(out_stream->codec->time_base),filt_frames[j]->nb_samples);
 					    	/*refresh pts*/
 					    	//frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
-					    	//filt_frames[j]->pts = av_frame_get_best_effort_timestamp(filt_frames[j]);
+					    	filt_frames[j]->pts = av_frame_get_best_effort_timestamp(filt_frames[j]);
 					    	/*make frames encode*/
                 			    	int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, filt_frames[j]);
                 			    	//int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, frames[i]);

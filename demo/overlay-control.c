@@ -121,7 +121,7 @@ int main( int argc, char **argv){
 	AVPacket 	*pkt      = av_packet_alloc();
 
 	int64_t		overlayed1stFrame_pts  = 0;
-	int		rocket_first_pkt_index = 100;
+	int		rocket_first_pkt_index = 50;
 	int		rocket_final_pkt_index = rocket_first_pkt_index + rocket_duration_s * sm_v->input_fm->fmt_ctx->streams[0]->r_frame_rate.num;
 			av_log(NULL,AV_LOG_DEBUG,"\nrocket_final_pkt_index: %d\n", rocket_final_pkt_index);
 
@@ -161,7 +161,14 @@ int main( int argc, char **argv){
             			av_log(NULL,AV_LOG_DEBUG,"frame_count<=0,decodec need more packets.\n");
             		    	continue;
             		}
-
+			
+			
+			/*adjust the frame pts to sync with gif pts*/
+			/*must synced with the filter's effeciently time*/
+			if (sm_v->cur_index_pkt_in == rocket_first_pkt_index){
+				overlayed1stFrame_pts = frames[0]->pts;
+				av_log(NULL,AV_LOG_DEBUG,">>>>>>>>overlayed1st frame pts : %"PRId64"<<<<<<<<\n",overlayed1stFrame_pts);
+			}	
 			/*overlay生效时间段*/
 			//if(sm_v->cur_index_pkt_in >= 100 && sm_v->cur_index_pkt_in <= 175){
 			if(sm_v->cur_index_pkt_in >= rocket_first_pkt_index && sm_v->cur_index_pkt_in <= rocket_final_pkt_index){
@@ -174,12 +181,6 @@ int main( int argc, char **argv){
 					av_log(NULL,AV_LOG_DEBUG,">>>>>>>>index_pkt_in : %d<<<<<<<<\n",sm_v->cur_index_pkt_in);
 					/*refresh frame pts*/
 					frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
-
-					/*adjust the frame pts to sync with gif pts*/
-					if (sm_v->cur_index_pkt_in == 100){//must synced with the filter's effeciently time
-						overlayed1stFrame_pts = frames[i]->pts;
-						av_log(NULL,AV_LOG_DEBUG,">>>>>>>>overlayed1st frame pts : %"PRId64"<<<<<<<<\n",overlayed1stFrame_pts);
-					}	
 					frames[i]->pts -= overlayed1stFrame_pts;
 					av_log(NULL,AV_LOG_DEBUG,">>>>>>>>new pts : %"PRId64"<<<<<<<<\n",frames[i]->pts);
 					

@@ -70,6 +70,7 @@ int main( int argc, char **argv){
 	meeting->video->cur_index_pkt_out	= 0;
 	const char * bitrate			= "2500k";
 	int ret 				= 0;
+	int rocket_duration_s			= 3;
 
 	/*开启网络流接收通道*/
 	av_dict_set(&meeting->video->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
@@ -118,7 +119,11 @@ int main( int argc, char **argv){
 	streamMap 	*sm_v     = meeting->video;
 	AVFormatContext *ifmt_ctx = sm_v->input_fm->fmt_ctx;
 	AVPacket 	*pkt      = av_packet_alloc();
-	int64_t		overlayed1stFrame_pts;
+
+	int64_t		overlayed1stFrame_pts  = 0;
+	int		rocket_first_pkt_index = 100;
+	int		rocket_final_pkt_index = rocket_first_pkt_index + rocket_duration_s * sm_v->input_fm->fmt_ctx->streams[0]->r_frame_rate.num;
+			av_log(NULL,AV_LOG_DEBUG,"\nrocket_final_pkt_index: %d\n", rocket_final_pkt_index);
 
 	while(1){
 		av_packet_unref(pkt);
@@ -158,7 +163,8 @@ int main( int argc, char **argv){
             		}
 
 			/*overlay生效时间段*/
-			if(sm_v->cur_index_pkt_in >= 100 && sm_v->cur_index_pkt_in <= 200){
+			//if(sm_v->cur_index_pkt_in >= 100 && sm_v->cur_index_pkt_in <= 175){
+			if(sm_v->cur_index_pkt_in >= rocket_first_pkt_index && sm_v->cur_index_pkt_in <= rocket_final_pkt_index){
 			//if( sm_v->cur_index_pkt_in <= 100){
 				/*make frames filting*/
 				for (int i = 0; i < frame_count; i++) {
@@ -170,7 +176,7 @@ int main( int argc, char **argv){
 					frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
 
 					/*adjust the frame pts to sync with gif pts*/
-					if (sm_v->cur_index_pkt_in == 100{//must synced with the filter's effeciently time
+					if (sm_v->cur_index_pkt_in == 100){//must synced with the filter's effeciently time
 						overlayed1stFrame_pts = frames[i]->pts;
 						av_log(NULL,AV_LOG_DEBUG,">>>>>>>>overlayed1st frame pts : %"PRId64"<<<<<<<<\n",overlayed1stFrame_pts);
 					}	

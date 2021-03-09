@@ -56,7 +56,7 @@ int main( int argc, char **argv){
 	//meeting->video->filtermap->descr	= "movie=rocket.gif[wm];[in][wm]overlay=5:5[out]";
 	//meeting->video->filtermap->descr	= "movie=rocket.gif[wm];[in][wm]overlay=(man_w-overlay_w)/2:(main_h-overlay_h)/2[out]";
 	//meeting->video->filtermap->descr	= "movie=logo.png[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
-	meeting->video->filtermap->descr	= "movie=rocket.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
+	meeting->video->filtermap->descr	= "movie=springrocket.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
 	//meeting->video->filtermap->descr	= "movie=minibanana.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
 	//meeting->video->filtermap->descr	= "boxblur";
 	//meeting->video->filtermap->descr	= "hflip";
@@ -70,7 +70,7 @@ int main( int argc, char **argv){
 	meeting->video->cur_index_pkt_out	= 0;
 	const char * bitrate			= "2500k";
 	int ret 				= 0;
-	int rocket_duration_s			= 3;
+	int gif_duration_s			= 2;
 
 	/*开启网络流接收通道*/
 	av_dict_set(&meeting->video->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
@@ -120,10 +120,11 @@ int main( int argc, char **argv){
 	AVFormatContext *ifmt_ctx = sm_v->input_fm->fmt_ctx;
 	AVPacket 	*pkt      = av_packet_alloc();
 
-	int64_t		overlayed1stFrame_pts  = 0;
-	int		rocket_first_pkt_index = 50;
-	int		rocket_final_pkt_index = rocket_first_pkt_index + rocket_duration_s * sm_v->input_fm->fmt_ctx->streams[0]->r_frame_rate.num;
-			av_log(NULL,AV_LOG_DEBUG,"\nrocket_final_pkt_index: %d\n", rocket_final_pkt_index);
+	int64_t		overlayed1stFrame_pts  	= 0;
+	int		gif_first_pkt_index 	= 30;
+	int		gif_increment_pkt_index	= gif_duration_s * sm_v->input_fm->fmt_ctx->streams[0]->r_frame_rate.num;
+	int		gif_final_pkt_index = gif_first_pkt_index + gif_increment_pkt_index;
+			av_log(NULL,AV_LOG_DEBUG,"\ngif_increment_pkt_index: %d\n", gif_increment_pkt_index);
 
 	while(1){
 		av_packet_unref(pkt);
@@ -165,13 +166,20 @@ int main( int argc, char **argv){
 			
 			/*adjust the frame pts to sync with gif pts*/
 			/*must synced with the filter's effeciently time*/
-			if (sm_v->cur_index_pkt_in == rocket_first_pkt_index){
+			if ((sm_v->cur_index_pkt_in - gif_first_pkt_index) % gif_increment_pkt_index == 0 ){
 				overlayed1stFrame_pts = frames[0]->pts;
 				av_log(NULL,AV_LOG_DEBUG,">>>>>>>>overlayed1st frame pts : %"PRId64"<<<<<<<<\n",overlayed1stFrame_pts);
+				if(init_filters(meeting->video)<0){
+				    av_log(NULL,AV_LOG_ERROR,"could not init video filter.\n");
+				    goto end;
+				}else   av_log(NULL,AV_LOG_DEBUG,"successed init filter: video\n");
+	
+
 			}	
 			/*overlay生效时间段*/
 			//if(sm_v->cur_index_pkt_in >= 100 && sm_v->cur_index_pkt_in <= 175){
-			if(sm_v->cur_index_pkt_in >= rocket_first_pkt_index && sm_v->cur_index_pkt_in <= rocket_final_pkt_index){
+			//if(sm_v->cur_index_pkt_in >= gif_first_pkt_index && sm_v->cur_index_pkt_in <= gif_final_pkt_index){
+			if(sm_v->cur_index_pkt_in >= gif_first_pkt_index && sm_v->cur_index_pkt_in <= 270){
 			//if( sm_v->cur_index_pkt_in <= 100){
 				/*make frames filting*/
 				for (int i = 0; i < frame_count; i++) {

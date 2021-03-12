@@ -153,7 +153,8 @@ int add_stream(meetPro *meeting,codecMap *cm,enum AVCodecID codec_id,const char 
 int set_outputs(meetPro *meeting,int trans_video,const char *bitrate){
     int ret;
     av_log(NULL,AV_LOG_DEBUG,"ofmt=%x\n",meeting->output->ofmt);
-    avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "flv", meeting->output->filename);
+    //avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "flv", meeting->output->filename);
+    avformat_alloc_output_context2(&meeting->output->fmt_ctx, NULL, "rtp", meeting->output->filename);
     if (!meeting->output->fmt_ctx) {
         av_log(NULL,AV_LOG_ERROR, "Could not create output context\n");
         return -1;

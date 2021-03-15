@@ -147,23 +147,24 @@ int main( int argc, char **argv){
 	int64_t pts_time;
 	int64_t now_time;
 
+	int testindex = 1;
+
 	//signal(SIGINT,sig_hander);
 	while(1){
 	signal(SIGINT,sig_hander);
 
 
 
-	if(sm_v->cur_index_pkt_in == 30)
+	if(sm_v->cur_index_pkt_in == testindex * 30){
 		signaled = 1;
+		gifstart = signaled;
+		}
 
-	if(sm_v->cur_index_pkt_in == 90)
+	if(sm_v->cur_index_pkt_in == testindex * 30 + 150){
 		signaled = 0;
-
-	if(sm_v->cur_index_pkt_in == 150)
-		signaled = 1;
-
-	if(sm_v->cur_index_pkt_in == 210)
-		signaled = 0;
+		gifstart = signaled;
+		testindex += 10;
+		}
 
 
 

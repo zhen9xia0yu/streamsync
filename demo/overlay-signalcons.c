@@ -11,9 +11,11 @@
 #define MAX_PIECE 32
 
 sig_atomic_t signaled = 0;
+sig_atomic_t gifstart = 0;
 
 void sig_hander(int signum){
 	signaled = !signaled;
+	gifstart = signaled;
 }
 
 int pts_small(const streamMap* a, const streamMap* b) {
@@ -151,17 +153,17 @@ int main( int argc, char **argv){
 
 
 
-//	if(sm_v->cur_index_pkt_in == 30)
-//		signaled = 1;
-//
-//	if(sm_v->cur_index_pkt_in == 90)
-//		signaled = 0;
-//
-//	if(sm_v->cur_index_pkt_in == 150)
-//		signaled = 1;
-//
-//	if(sm_v->cur_index_pkt_in == 210)
-//		signaled = 0;
+	if(sm_v->cur_index_pkt_in == 30)
+		signaled = 1;
+
+	if(sm_v->cur_index_pkt_in == 90)
+		signaled = 0;
+
+	if(sm_v->cur_index_pkt_in == 150)
+		signaled = 1;
+
+	if(sm_v->cur_index_pkt_in == 210)
+		signaled = 0;
 
 
 
@@ -223,9 +225,10 @@ int main( int argc, char **argv){
 			//if(sm_v->cur_index_pkt_in >= gif_first_pkt_index ){
 			//if( sm_v->cur_index_pkt_in <= 100){
 			if( signaled ){
-
-				gif_first_pkt_index = sm_v->cur_index_pkt_in;
-	
+				if(gifstart){
+					gif_first_pkt_index = sm_v->cur_index_pkt_in;
+					gifstart = 0;
+				}
 				/*adjust the frame pts to sync with gif pts*/
 				/*must synced with the filter's effeciently time*/
 				if ((sm_v->cur_index_pkt_in - gif_first_pkt_index) % gif_increment_pkt_index == 0 ){

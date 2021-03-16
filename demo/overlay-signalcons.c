@@ -155,16 +155,16 @@ int main( int argc, char **argv){
 
 
 
-	if(sm_v->cur_index_pkt_in == testindex * 30){
-		signaled = 1;
-		gifstart = signaled;
-		}
-
-	if(sm_v->cur_index_pkt_in == testindex * 30 + 150){
-		signaled = 0;
-		gifstart = signaled;
-		testindex += 10;
-		}
+//	if(sm_v->cur_index_pkt_in == testindex * 30){
+//		signaled = 1;
+//		gifstart = signaled;
+//		}
+//
+//	if(sm_v->cur_index_pkt_in == testindex * 30 + 150){
+//		signaled = 0;
+//		gifstart = signaled;
+//		testindex += 10;
+//		}
 
 
 
@@ -264,8 +264,7 @@ int main( int argc, char **argv){
 
                 			for (int j = 0; j < filt_frame_count; j++) {
 						AVStream* out_stream = meeting->output->fmt_ctx->streams[0];
-                			    	av_log(NULL,AV_LOG_DEBUG,"got 1 filt_frame->pts=%"PRId64" outstream_codec showpts = %lf filt_frame->nb_samples=%d\n",filt_frames[j]->pts,filt_frames[j]->pts*av_q2d(out_stream->codec->time_base),filt_frames[j]->nb_samples);
-					    	/*refresh pts*/
+                			    	av_log(NULL,AV_LOG_DEBUG,"got 1 filt_frame->pts=%"PRId64" outstream_codec showpts = %lf filt_frame->nb_samples=%d\n",filt_frames[j]->pts,filt_frames[j]->pts*av_q2d(out_stream->codec->time_base),filt_frames[j]->nb_samples); /*refresh pts*/
 					    	//frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
 					    	filt_frames[j]->pts = av_frame_get_best_effort_timestamp(filt_frames[j]);
 					    	/*make frames encode*/
@@ -277,20 +276,18 @@ int main( int argc, char **argv){
                 			    	    break;
                 			    	}
                 			    	for (int k = 0; k < pkt_count; k++) {
-                			    	    print_time_sec();
+                			    	    	print_time_sec();
+					    		/*delay part*/
+					    		//time_base = ifmt_ctx->streams[0]->time_base;
+					    		time_base = out_stream->codec->time_base;
+					    		pts_time = av_rescale_q(pkts[k]->pts,time_base,AV_TIME_BASE_Q);
+					    		now_time = av_gettime() - start_time;
+					    		if (pts_time > now_time)
+					    			av_usleep(pts_time - now_time);
 
-
-					    /*delay part*/
-					    time_base = ifmt_ctx->streams[0]->time_base;
-					    pts_time = av_rescale_q(pkts[k]->dts,time_base,time_base_q);
-					    now_time = av_gettime() - start_time;
-					    if (pts_time > now_time)
-					    	av_usleep(pts_time - now_time);
-
-
-                			    	    av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", meeting->video->cur_index_pkt_out);
-                			    	    meeting->video->cur_index_pkt_out++;
-                			    	    ret = write_pkt(pkts[k], in_stream,out_stream, 0, meeting->output, 1);
+                			    	    	av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", meeting->video->cur_index_pkt_out);
+                			    	    	meeting->video->cur_index_pkt_out++;
+                			    	    	ret = write_pkt(pkts[k], in_stream,out_stream, 0, meeting->output, 1);
                 			    	    // ret = ?
                 			    	}
                 			}
@@ -311,15 +308,13 @@ int main( int argc, char **argv){
                     			}
                     			for (int k = 0; k < pkt_count; k++) {
                     			    print_time_sec();
-
 					    /*delay part*/
-					    time_base = ifmt_ctx->streams[0]->time_base;
-					    pts_time = av_rescale_q(pkts[k]->dts,time_base,time_base_q);
+					    //time_base = ifmt_ctx->streams[0]->time_base;
+					    time_base = out_stream->codec->time_base;
+					    pts_time = av_rescale_q(pkts[k]->pts,time_base,AV_TIME_BASE_Q);
 					    now_time = av_gettime() - start_time;
 					    if (pts_time > now_time)
 					    	av_usleep(pts_time - now_time);
-
-
                     			    av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", meeting->video->cur_index_pkt_out);
                     			    meeting->video->cur_index_pkt_out++;
                     			    ret = write_pkt(pkts[k], in_stream,out_stream, 0, meeting->output, 1);

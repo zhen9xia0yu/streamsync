@@ -147,7 +147,8 @@ int main( int argc, char **argv){
 	int64_t pts_time;
 	int64_t now_time;
 
-	int testindex = 1;
+	//int testindex = 1;
+	int gif_index = 0;
 
 	//signal(SIGINT,sig_hander);
 	while(1){
@@ -210,15 +211,18 @@ int main( int argc, char **argv){
 			
 			/*adjust the frame pts to sync with gif pts*/
 			/*must synced with the filter's effeciently time*/
-			if ((sm_v->cur_index_pkt_in - gif_first_pkt_index) % gif_increment_pkt_index == 0 ){
-				frames[0]->pts = av_frame_get_best_effort_timestamp(frames[0]);
-				overlayed1stFrame_pts = frames[0]->pts;
-				av_log(NULL,AV_LOG_DEBUG,">>>>>>>>overlayed1st frame pts : %"PRId64"<<<<<<<<\n",overlayed1stFrame_pts);
-				if(init_filters(meeting->video)<0){
-				    av_log(NULL,AV_LOG_ERROR,"could not init video filter.\n");
-				    goto end;
-				}else   av_log(NULL,AV_LOG_DEBUG,"successed init filter: video\n");
-			}	
+			//if ((sm_v->cur_index_pkt_in - gif_first_pkt_index) % gif_increment_pkt_index == 0 ){
+			//	frames[0]->pts = av_frame_get_best_effort_timestamp(frames[0]);
+			//	overlayed1stFrame_pts = frames[0]->pts;
+			//	av_log(NULL,AV_LOG_DEBUG,">>>>>>>>overlayed1st frame pts : %"PRId64"<<<<<<<<\n",overlayed1stFrame_pts);
+
+
+
+			//	if(init_filters(meeting->video)<0){
+			//	    av_log(NULL,AV_LOG_ERROR,"could not init video filter.\n");
+			//	    goto end;
+			//	}else   av_log(NULL,AV_LOG_DEBUG,"successed init filter: video\n");
+			//}	
 			/*overlay生效时间段*/
 			//if(sm_v->cur_index_pkt_in >= 100 && sm_v->cur_index_pkt_in <= 175){
 			//if(sm_v->cur_index_pkt_in >= gif_first_pkt_index && sm_v->cur_index_pkt_in <= gif_final_pkt_index){
@@ -229,6 +233,38 @@ int main( int argc, char **argv){
 				if(gifstart){
 					gif_first_pkt_index = sm_v->cur_index_pkt_in;
 					gifstart = 0;
+
+
+					switch (gif_index % 5){
+						case 0: {
+							meeting->video->filtermap->descr = "movie=hulahoop-2.73s.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
+							gif_duration_s	= 2.73;
+							break;
+						}
+						case 1: {
+							meeting->video->filtermap->descr = "movie=rainbowstar-1.6s.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
+							gif_duration_s	= 1.6;
+							break;
+						}
+						case 2: {
+							meeting->video->filtermap->descr = "movie=springrocket-1.83s.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
+							gif_duration_s	= 1.83;
+							break;
+						}
+						case 3: {
+							meeting->video->filtermap->descr = "movie=whiterocket-4s.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
+							gif_duration_s	= 4;
+							break;
+						}
+						case 4: {
+							meeting->video->filtermap->descr = "movie=circlerocket-2.4s.gif[wm];[in][wm]overlay=((main_w-overlay_w)/2):((main_h-overlay_h)/2)[out]";
+							gif_duration_s	= 2.4;
+							break;
+						}
+						default:printf("none.\n");
+					}
+					gif_increment_pkt_index	= gif_duration_s * sm_v->input_fm->fmt_ctx->streams[0]->r_frame_rate.num;
+					gif_index++;
 				}
 				/*adjust the frame pts to sync with gif pts*/
 				/*must synced with the filter's effeciently time*/
@@ -236,6 +272,7 @@ int main( int argc, char **argv){
 					frames[0]->pts = av_frame_get_best_effort_timestamp(frames[0]);
 					overlayed1stFrame_pts = frames[0]->pts;
 					av_log(NULL,AV_LOG_DEBUG,">>>>>>>>overlayed1st frame pts : %"PRId64"<<<<<<<<\n",overlayed1stFrame_pts);
+
 					if(init_filters(meeting->video)<0){
 					    av_log(NULL,AV_LOG_ERROR,"could not init video filter.\n");
 					    goto end;

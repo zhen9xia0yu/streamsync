@@ -83,11 +83,13 @@ int main( int argc, char **argv){
 	meeting->video->cur_index_pkt_in	= 0;
 	meeting->video->cur_index_pkt_out	= 0;
 	const char * bitrate			= "2500k";
+	//const char * bitrate			= "1000k";
 	int ret 				= 0;
 	double gif_duration_s			= 2.73;
 
 	/*开启网络流接收通道*/
 	av_dict_set(&meeting->video->input_fm->ops,"protocol_whitelist","file,udp,rtp",0);
+	av_dict_set(&meeting->video->input_fm->ops,"buffer_size","655360",0);
 
 	/*set input*/
 	if((ret = set_inputs(meeting))<0){

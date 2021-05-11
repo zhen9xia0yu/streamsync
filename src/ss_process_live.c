@@ -9,6 +9,8 @@ void init_LivePro(LivePro *livep){
     livep->output_audio = (fileMap *) calloc(1,sizeof(fileMap));
     livep->video = (streamMap *) calloc(1,sizeof(streamMap));
     livep->audio = (streamMap *) calloc(1,sizeof(streamMap));
+    livep->rtmp_index_video = -1;
+    livep->rtmp_index_audio = -1;
     
     init_fileMap(livep->input_rtmp);
     init_fileMap(livep->output_video);
@@ -26,7 +28,7 @@ void free_LivePro(LivePro * livep){
 }
 
 int set_inputs(LivePro * livep){
-    int ret;
+    int ret,i;
     if(livep->input_rtmp->filename != ""){
     	livep->input_rtmp->fmt_ctx=NULL; 
 	if ((ret = avformat_open_input(&livep->input_rtmp->fmt_ctx, livep->input_rtmp->filename, 0, &livep->input_rtmp->ops)) < 0) {
@@ -37,13 +39,106 @@ int set_inputs(LivePro * livep){
    	    av_log(NULL,AV_LOG_ERROR, "Failed to find input stream information\n");
    	    return ret;
    	}
-    	av_log(NULL,AV_LOG_INFO,"===========Input Information==========\n");
+	for (i=0; i<livep->input_rtmp->fmt_ctx->nb_streams; i++){
+	    if( livep->input_rtmp->fmt_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+		livep->rtmp_index_video = i;
+	    if( livep->input_rtmp->fmt_ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
+		livep->rtmp_index_audio = i;
+	}
+    	av_log(NULL,AV_LOG_INFO,"==============Input Information=============\n");
     	av_dump_format(livep->input_rtmp->fmt_ctx, 0, livep->input_rtmp->filename, 0);
+	av_log(NULL,AV_LOG_INFO,"RTMP video stream index: %d\n", livep->rtmp_index_video);
+	av_log(NULL,AV_LOG_INFO,"RTMP audio stream index: %d\n", livep->rtmp_index_audio);
     	av_log(NULL,AV_LOG_INFO,"============================================\n");
     }else{
     	av_log(NULL,AV_LOG_ERROR,"input URL none.\n");
 	return -1;
     }
+    return 0;
+}
+
+
+int set_outputs(LivePro *livep){
+    int ret;
+    /************video start**************/
+    avformat_alloc_output_context2(&livep->output_video->fmt_ctx, NULL, "rtp", livep->output_video->filename);
+    if (!livep->output_video->fmt_ctx) {
+        av_log(NULL,AV_LOG_ERROR, "Could not create output video context\n");
+        return -1;
+    }
+    //copy stream
+    AVStream *in_stream = livep->input_rtmp->fmt_ctx->streams[ livep->rtmp_index_video ];
+    AVStream *out_stream = avformat_new_stream(livep->output_video->fmt_ctx, in_stream->codec->codec);
+    if (!out_stream) {
+        printf( "Failed allocating output video stream\n");
+        ret = AVERROR_UNKNOWN;
+        return -1;
+    }
+    if (avcodec_parameters_from_context(out_stream->codecpar, in_stream->codec) < 0) {
+        printf( "Failed to copy context from input to output video stream codec context\n");
+        return -1;
+    }
+    out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
+    if (livep->output_video->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER){
+        out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+    }
+    av_log(NULL,AV_LOG_INFO,"==========Output video Information==========\n");
+    av_dump_format(livep->output_video->fmt_ctx, 0, livep->output_video->filename, 1);
+    av_log(NULL,AV_LOG_INFO,"============================================\n");
+    //Open output video file
+    if (!(livep->output_video->ofmt->flags & AVFMT_NOFILE)) {
+        if (avio_open(&livep->output_video->fmt_ctx->pb, livep->output_video->filename, AVIO_FLAG_WRITE) < 0) {
+            av_log(NULL,AV_LOG_ERROR, "Could not open output video file '%s'", livep->output_video->filename);
+            return -1;
+        }
+    }
+    //Write output video file header
+    if (avformat_write_header(livep->output_video->fmt_ctx, NULL) < 0) {
+        av_log(NULL,AV_LOG_ERROR, "could not write the header to output video.\n");
+        return -1;
+    }
+    /************video over**************/
+
+    /************audio start**************/
+    avformat_alloc_output_context2(&livep->output_audio->fmt_ctx, NULL, "rtp", livep->output_audio->filename);
+    if (!livep->output_audio->fmt_ctx) {
+        av_log(NULL,AV_LOG_ERROR, "Could not create output audio context\n");
+        return -1;
+    }
+    //copy stream
+    in_stream = livep->input_rtmp->fmt_ctx->streams[ livep->rtmp_index_audio ];
+    out_stream = avformat_new_stream(livep->output_audio->fmt_ctx, in_stream->codec->codec);
+    if (!out_stream) {
+        printf( "Failed allocating output audio stream\n");
+        ret = AVERROR_UNKNOWN;
+        return -1;
+    }
+    if (avcodec_parameters_from_context(out_stream->codecpar, in_stream->codec) < 0) {
+        printf( "Failed to copy context from input to output audio stream codec context\n");
+        return -1;
+    }
+    out_stream->codec->codec_tag = 0;//与编码器相关的附加信息
+    if (livep->output_audio->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER){
+        out_stream->codec->flags |= CODEC_FLAG_GLOBAL_HEADER;
+    }
+    av_log(NULL,AV_LOG_INFO,"==========Output audio Information==========\n");
+    av_dump_format(livep->output_audio->fmt_ctx, 0, livep->output_audio->filename, 1);
+    av_log(NULL,AV_LOG_INFO,"============================================\n");
+    //Open output audio file
+    if (!(livep->output_audio->ofmt->flags & AVFMT_NOFILE)) {
+        if (avio_open(&livep->output_audio->fmt_ctx->pb, livep->output_audio->filename, AVIO_FLAG_WRITE) < 0) {
+            av_log(NULL,AV_LOG_ERROR, "Could not open output audio file '%s'", livep->output_audio->filename);
+            return -1;
+        }
+    }
+    //Write output audio file header
+    if (avformat_write_header(livep->output_audio->fmt_ctx, NULL) < 0) {
+        av_log(NULL,AV_LOG_ERROR, "could not write the header to output audio.\n");
+        return -1;
+    }
+    /************audio over**************/
+
+
     return 0;
 }
 
@@ -140,9 +235,9 @@ int set_inputs(LivePro * livep){
 //        return -1;
 //    }else av_log(NULL,AV_LOG_DEBUG,"sucessed copy set the coder! %d !",type);
 //   if( avcodec_parameters_from_context(out_stream->codecpar,cm->codec_ctx)<0){
-//       av_log(NULL,AV_LOG_ERROR,"failed to copy codec parameters.\n");
+//       av_log(null,av_log_error,"failed to copy codec parameters.\n");
 //       return -1;
-//   }else av_log(NULL,AV_LOG_DEBUG,"sucessed copy codec parameters.%d\n",type);
+//   }else av_log(null,av_log_debug,"sucessed copy codec parameters.%d\n",type);
 //    return 0;
 //}
 //

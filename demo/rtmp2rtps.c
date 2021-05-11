@@ -51,7 +51,12 @@ int main( int argc, char **argv){
         av_log(NULL,AV_LOG_ERROR,"error occred while set inputs.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set inputs\n");
-
+    //set output & encoders
+    if((ret = set_outputs(livep))<0){
+        av_log(NULL,AV_LOG_ERROR,"error occred while set outputs.\n");
+        goto end;
+    }else   av_log(NULL,AV_LOG_DEBUG,"successed set outputs.\n");
+ 
  end:
     avformat_close_input(&livep->input_rtmp->fmt_ctx);
     //free_codecMap(livep->video->codecmap);

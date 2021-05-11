@@ -10,6 +10,8 @@ typedef struct
     fileMap *output_audio;
     streamMap *video;
     streamMap *audio;
+    int	rtmp_index_video;
+    int	rtmp_index_audio;
 }   LivePro;
 void init_LivePro(LivePro * livep);
 void free_LivePro(LivePro * livep);

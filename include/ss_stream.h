@@ -16,7 +16,6 @@
 
 typedef struct
 {
-    fileMap *input_fm;
     codecMap *codecmap;
     filterMap *filtermap;
     int cur_index_pkt_in;

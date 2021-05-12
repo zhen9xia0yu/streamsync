@@ -52,7 +52,7 @@ int main( int argc, char **argv){
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set inputs\n");
     //set outputs & copy streams
-    if((ret = set_outputs(livep))<0){
+    if((ret = set_outputs(livep,VIDEO_STREAM_NEW))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set outputs.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set outputs.\n");

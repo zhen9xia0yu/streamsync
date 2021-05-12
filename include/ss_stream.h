@@ -13,6 +13,8 @@
 #define STREAM_DURATION   10.0
 #define STREAM_FRAME_RATE 25 /* 25 images/s */
 #define STREAM_PIX_FMT    AV_PIX_FMT_YUV420P /* default pix_fmt */
+#define VIDEO_STREAM_NEW  1
+#define VIDEO_STREAM_COPY 0
 
 typedef struct
 {

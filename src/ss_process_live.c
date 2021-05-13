@@ -59,6 +59,8 @@ int set_inputs(LivePro * livep){
 
 int set_outputs(LivePro *livep, int flags_video_trans){
     int ret;
+    AVStream *in_stream;
+    AVStream *out_stream;
     /************video start**************/
     avformat_alloc_output_context2(&livep->output_video->fmt_ctx, NULL, "rtp", livep->output_video->filename);
     if (!livep->output_video->fmt_ctx) {
@@ -68,8 +70,8 @@ int set_outputs(LivePro *livep, int flags_video_trans){
 
     if(flags_video_trans) {
 	//copy stream
-	AVStream *in_stream = livep->input_rtmp->fmt_ctx->streams[ livep->rtmp_index_video ];
-	AVStream *out_stream = avformat_new_stream(livep->output_video->fmt_ctx, in_stream->codec->codec);
+	in_stream = livep->input_rtmp->fmt_ctx->streams[ livep->rtmp_index_video ];
+	out_stream = avformat_new_stream(livep->output_video->fmt_ctx, in_stream->codec->codec);
 	if (!out_stream) {
 	    printf( "Failed allocating output video stream\n");
 	    ret = AVERROR_UNKNOWN;
@@ -85,7 +87,7 @@ int set_outputs(LivePro *livep, int flags_video_trans){
 	}
     }
     else{
-	if ((ret = add_stream(meeting,meeting->audio->codecmap,AUDIO_CODEC_ID,bitrate)) < 0){
+	if ((ret = add_stream(livep->input_rtmp, livep->output_video, livep->video->codecmap, AUDIO_CODEC_ID, livep->rtmp_index_video)) < 0){
     	  av_log(NULL,AV_LOG_ERROR,"error occured when add video stream failed.\n");
     	   return -1;
     	}
@@ -153,24 +155,29 @@ int set_outputs(LivePro *livep, int flags_video_trans){
     return 0;
 }
 
-int add_stream( fileMap *input_fm, fileMap *output_fm,codecMap *cm,enum AVCodecID codec_id){
+int add_stream( fileMap *input_fm, fileMap *output_fm, codecMap *cm, enum AVCodecID codec_id, int stream_index){
     int i;
     cm->opts=NULL;
     cm->codec = avcodec_find_encoder(codec_id);
+    AVStream *s;
+
     if(!cm->codec){
         av_log(NULL,AV_LOG_ERROR,"could not find encoder for '%s'\n",avcodec_get_name(codec_id));
         return -1;
     }else av_log(NULL,AV_LOG_DEBUG,"successed find encoder for '%s'\n",avcodec_get_name(codec_id));
-    AVStream *out_stream = avformat_new_stream(meeting->output->fmt_ctx,NULL);
-	if(!out_stream){
+
+    AVStream *out_stream = avformat_new_stream(output_fm->fmt_ctx,NULL); //stream的index
+    if(!out_stream){
         av_log(NULL,AV_LOG_ERROR,"could not allocate stream\n");
         return -1;
     }else av_log(NULL,AV_LOG_DEBUG,"successed allocate stream.\n");
+
     cm->codec_ctx = avcodec_alloc_context3(cm->codec);
     if(!cm->codec_ctx){
         av_log(NULL,AV_LOG_ERROR,"could not alloc an encoding context\n");
         return -1;
     }else av_log(NULL,AV_LOG_DEBUG,"successed alloc an encoding context\n");
+
     switch (cm->codec->type) {
     case AVMEDIA_TYPE_VIDEO:
         /*
@@ -184,26 +191,26 @@ int add_stream( fileMap *input_fm, fileMap *output_fm,codecMap *cm,enum AVCodecI
         cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
         cm->codec_ctx->gop_size  = 12; */     /* emit one intra frame every twelve frames at most */
 
-	AVStream * s=meeting->video->input_fm->fmt_ctx->streams[0];
-        cm->codec_ctx->codec_id = codec_id;
-        cm->codec_ctx->bit_rate = s->codec->bit_rate;
-        cm->codec_ctx->width    = s->codec->width;
-        cm->codec_ctx->height   = s->codec->height;
+	s					=input_fm->fmt_ctx->streams[ stream_index ];
+        cm->codec_ctx->codec_id				= codec_id;
+        cm->codec_ctx->bit_rate				= s->codec->bit_rate;
+        cm->codec_ctx->width				= s->codec->width;
+        cm->codec_ctx->height			        = s->codec->height;
         //meeting->output->fmt_ctx->streams[0]->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
-        cm->codec_ctx->time_base = s->codec->time_base;//原tbc
+        cm->codec_ctx->time_base			= s->codec->time_base;//原tbc
         //meeting->output->fmt_ctx->streams[0]->time_base=cm->codec_ctx->time_base;
-        meeting->output->fmt_ctx->streams[0]->time_base=s->time_base;//原tbn
-        meeting->output->fmt_ctx->streams[0]->avg_frame_rate=s->avg_frame_rate;//原fps
-        meeting->output->fmt_ctx->streams[0]->r_frame_rate=s->r_frame_rate;//原tbr
+        output_fm->fmt_ctx->streams[0]->time_base	=s->time_base;//原tbn
+        output_fm->fmt_ctx->streams[0]->avg_frame_rate	=s->avg_frame_rate;//原fps
+        output_fm->fmt_ctx->streams[0]->r_frame_rate	=s->r_frame_rate;//原tbr
         //cm->codec_ctx->framerate = (AVRational){25,1};
-        cm->codec_ctx->framerate = s->codec->framerate;//
-        cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
+        cm->codec_ctx->framerate			= s->codec->framerate;//
+        cm->codec_ctx->pix_fmt				= STREAM_PIX_FMT;
         //cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
-        cm->codec_ctx->gop_size  = 25;      /* emit one intra frame every twelve frames at most */
-        av_dict_set(&cm->opts,"minrate",bitrate,0);
-        av_dict_set(&cm->opts,"b",bitrate,0);
-        av_dict_set(&cm->opts,"bufsize",bitrate,0);
-        av_dict_set(&cm->opts,"maxrate",bitrate,0);
+        cm->codec_ctx->gop_size				= 25;      /* emit one intra frame every twelve frames at most */
+        av_dict_set(&cm->opts,"minrate","2500k",0);
+        av_dict_set(&cm->opts,"b","2500k",0);
+        av_dict_set(&cm->opts,"bufsize","2500k",0);
+        av_dict_set(&cm->opts,"maxrate","2500k",0);
         av_dict_set(&cm->opts,"profile","baseline",0);
         av_dict_set(&cm->opts,"level","3",0);
         av_dict_set(&cm->opts,"strict","2",0);
@@ -214,27 +221,26 @@ int add_stream( fileMap *input_fm, fileMap *output_fm,codecMap *cm,enum AVCodecI
         }
         if (cm->codec_ctx->codec_id == AV_CODEC_ID_MPEG1VIDEO) {
             cm->codec_ctx->mb_decision = 2;
-       }
-        type=0;
-    break;
+	}
+	break;
     default:
         break;
     }
     cm->codec_ctx->codec_tag = 0;
-    if (meeting->output->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+    if (output_fm->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
         cm->codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     if(avcodec_open2(cm->codec_ctx,cm->codec,&cm->opts)<0){
         av_log(NULL,AV_LOG_ERROR,"could not open the encoder.\n");
         return -1;
-    }else av_log(NULL,AV_LOG_DEBUG,"sucessed open the encoder.%d!\n",type);
-    if(avcodec_copy_context(out_stream->codec, cm->codec_ctx)<0){
-        av_log(NULL,AV_LOG_ERROR,"failed to set context to out stream codec\n");
+    }else av_log(NULL,AV_LOG_DEBUG,"sucessed open the encoder.\n");
+   // if(avcodec_copy_context(out_stream->codec, cm->codec_ctx)<0){
+   //     av_log(NULL,AV_LOG_ERROR,"failed to set context to out stream codec\n");
+   //     return -1;
+   // }else av_log(NULL,AV_LOG_DEBUG,"sucessed copy set the coder! %d !",type);
+    if( avcodec_parameters_from_context(out_stream->codecpar,cm->codec_ctx)<0){
+        av_log(NULL,AV_LOG_ERROR,"failed to copy codec parameters.\n");
         return -1;
-    }else av_log(NULL,AV_LOG_DEBUG,"sucessed copy set the coder! %d !",type);
-   if( avcodec_parameters_from_context(out_stream->codecpar,cm->codec_ctx)<0){
-       av_log(null,av_log_error,"failed to copy codec parameters.\n");
-       return -1;
-   }else av_log(null,av_log_debug,"sucessed copy codec parameters.%d\n",type);
+    }else av_log(NULL,AV_LOG_DEBUG,"sucessed copy codec parameters.\n");
     return 0;
 }
 

@@ -68,7 +68,7 @@ int set_outputs(LivePro *livep, int flags_video_trans){
         return -1;
     }
 
-    if(flags_video_trans) {
+    if(!flags_video_trans) {
 	//copy stream
 	in_stream = livep->input_rtmp->fmt_ctx->streams[ livep->rtmp_index_video ];
 	out_stream = avformat_new_stream(livep->output_video->fmt_ctx, in_stream->codec->codec);
@@ -87,7 +87,7 @@ int set_outputs(LivePro *livep, int flags_video_trans){
 	}
     }
     else{
-	if ((ret = add_stream(livep->input_rtmp, livep->output_video, livep->video->codecmap, AUDIO_CODEC_ID, livep->rtmp_index_video)) < 0){
+	if ((ret = add_stream(livep->input_rtmp, livep->output_video, livep->video->codecmap, VIDEO_CODEC_ID, livep->rtmp_index_video)) < 0){
     	  av_log(NULL,AV_LOG_ERROR,"error occured when add video stream failed.\n");
     	   return -1;
     	}
@@ -191,7 +191,7 @@ int add_stream( fileMap *input_fm, fileMap *output_fm, codecMap *cm, enum AVCode
         cm->codec_ctx->pix_fmt = STREAM_PIX_FMT;
         cm->codec_ctx->gop_size  = 12; */     /* emit one intra frame every twelve frames at most */
 
-	s					=input_fm->fmt_ctx->streams[ stream_index ];
+	s						=input_fm->fmt_ctx->streams[ stream_index ];
         cm->codec_ctx->codec_id				= codec_id;
         cm->codec_ctx->bit_rate				= s->codec->bit_rate;
         cm->codec_ctx->width				= s->codec->width;
@@ -207,10 +207,10 @@ int add_stream( fileMap *input_fm, fileMap *output_fm, codecMap *cm, enum AVCode
         cm->codec_ctx->pix_fmt				= STREAM_PIX_FMT;
         //cm->codec_ctx->gop_size  = 12;      /* emit one intra frame every twelve frames at most */
         cm->codec_ctx->gop_size				= 25;      /* emit one intra frame every twelve frames at most */
-        av_dict_set(&cm->opts,"minrate","2500k",0);
-        av_dict_set(&cm->opts,"b","2500k",0);
-        av_dict_set(&cm->opts,"bufsize","2500k",0);
-        av_dict_set(&cm->opts,"maxrate","2500k",0);
+        av_dict_set(&cm->opts,"minrate","500k",0);
+        av_dict_set(&cm->opts,"b","500k",0);
+        av_dict_set(&cm->opts,"bufsize","500k",0);
+        av_dict_set(&cm->opts,"maxrate","500k",0);
         av_dict_set(&cm->opts,"profile","baseline",0);
         av_dict_set(&cm->opts,"level","3",0);
         av_dict_set(&cm->opts,"strict","2",0);

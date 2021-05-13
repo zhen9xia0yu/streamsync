@@ -61,30 +61,90 @@ int main( int argc, char **argv){
         av_log(NULL,AV_LOG_ERROR,"error occurred when open video decodec.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"sucessed set decodec: video\n");
- 
-//    //read data
-//    AVFormatContext *ifmt_ctx = livep->input_rtmp->fmt_ctx;
-//    AVPacket *pkt = av_packet_alloc();
-//    AVStream *in_stream;
-//    AVStream *out_stream;
-//
-//    while(1){
-//	if((ret = av_read_frame(ifmt_ctx,pkt))<0){
-//	    av_log(NULL,AV_LOG_ERROR,"av_read_frame() useless.\n");
-//	    break;
-//	} 
-//	/*video*/
-//	if(pkt->stream_index == livep->rtmp_index_video){
-//            av_log(NULL,AV_LOG_INFO,"read video packet index: %d\n", livep->video->cur_index_pkt_in++);
-//            av_log(NULL,AV_LOG_INFO,"read 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
-//	    in_stream  = livep->input_rtmp->fmt_ctx->streams[livep->rtmp_index_video];
-//            out_stream = livep->output_video->fmt_ctx->streams[0];
-//            ret = write_pkt(pkt,in_stream,out_stream,0,livep->output_video,0);
-//            if(ret<0){
-//                av_log(NULL,AV_LOG_ERROR,"error occured while video write 1 pkt\n");
-//                goto end;
-//            }
-//	}
+
+    /*prepare media data horizen*/
+    AVFrame* frames[MAX_PIECE] = {NULL};
+    for (int i = 0; i < MAX_PIECE; i++) {
+	frames[i] = av_frame_alloc();
+    }
+    AVFrame* filt_frames[MAX_PIECE] = {NULL};
+    for (int i = 0; i < MAX_PIECE; i++) {
+	filt_frames[i] = av_frame_alloc();
+    }
+    AVPacket* pkts[MAX_PIECE] = {NULL};
+    for (int i = 0; i < MAX_PIECE; i++) {
+	pkts[i] = av_packet_alloc();
+    }
+
+
+    //ready to ssync
+    streamMap	    *sm_v	    = livep->video;
+    AVFormatContext *ifmt_ctx	    = livep->input_rtmp->fmt_ctx;
+    AVPacket	    *pkt	    = av_packet_alloc();
+    AVStream	    *in_stream;
+    AVStream 	    *out_stream;
+
+    while(1){
+	//read data
+	av_packet_unref(pkt);
+	if((ret = av_read_frame(ifmt_ctx, pkt))<0)	break;
+
+	/*video*/
+	if(pkt->stream_index == livep->rtmp_index_video){
+            av_log(NULL,AV_LOG_INFO,"read video packet index: %d\n", livep->video->cur_index_pkt_in);
+            av_log(NULL,AV_LOG_DEBUG,"read 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
+
+	    in_stream  = livep->input_rtmp->fmt_ctx->streams[livep->rtmp_index_video];
+            out_stream = livep->output_video->fmt_ctx->streams[0];
+
+    	    /*set h264 pkt pts*/
+	    //	if(pkt->pts == AV_NOPTS_VALUE){
+	    if ( set_pts(pkt,in_stream,sm_v->cur_index_pkt_in)<0){
+		av_log(NULL,AV_LOG_ERROR,"could not set pts\n");
+		goto end;
+	    }
+	    av_log(NULL,AV_LOG_INFO,"after set pts, video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
+	    sm_v->cur_index_pkt_in++;
+            sm_v->cur_pts = pkt->pts;
+    	    av_log(NULL,AV_LOG_DEBUG,"in_stream->time_base: %d/%d  \n",in_stream->time_base.num,in_stream->time_base.den);
+    	    av_log(NULL,AV_LOG_DEBUG,"in_stream_codec->time_base: %d/%d  \n",in_stream->codec->time_base.num,in_stream->codec->time_base.den);
+    	    av_log(NULL,AV_LOG_DEBUG,"decodec->time_base: %d/%d  \n",sm_v->codecmap->dec_ctx->time_base.num,sm_v->codecmap->dec_ctx->time_base.den);
+	    av_packet_rescale_ts( pkt, in_stream->time_base, in_stream->codec->time_base);
+            av_log(NULL,AV_LOG_DEBUG,"after rescale, then 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
+
+	    /*got franmes from decodec*/
+	    int frame_count = decode( frames, MAX_PIECE, sm_v->codecmap->dec_ctx, pkt);
+	    av_log(NULL,AV_LOG_DEBUG,"frame_count :%d\n", ( frame_count ));
+	    if (frame_count <= 0) {
+		// add something
+		    av_log(NULL,AV_LOG_DEBUG,"frame_count<=0, decodec need more packets.\n");
+		    continue;
+	    }
+	    /*make frames encode*/
+	    for (int i = 0; i < frame_count; i++) {
+		//av_log(NULL,AV_LOG_DEBUG,"got 1 frame->pts=%"PRId64" instream_codec  showpts = %lf  frame->nb_samples=%d\n",frames[i]->pts,frames[i]->pts*av_q2d(in_stream->codec->time_base),frames[i]->nb_samples);
+		av_log(NULL,AV_LOG_DEBUG,"got 1 frame->pts=%"PRId64" instream_codec  showpts = %lf \n",frames[i]->pts,frames[i]->pts*av_q2d(in_stream->codec->time_base));
+		/*refresh pts*/
+		frames[i]->pts = av_frame_get_best_effort_timestamp(frames[i]);
+		int pkt_count = encode( pkts, MAX_PIECE, sm_v->codecmap->codec_ctx, frames[i]);
+		av_log(NULL,AV_LOG_DEBUG,"pkt_count :%d\n", ( pkt_count ));
+		if (pkt_count <= 0) {
+		    //???
+		    break;
+		}
+		for (int k = 0; k < pkt_count; k++) {
+		    print_time_sec();
+		    av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", livep->video->cur_index_pkt_out);
+		    livep->video->cur_index_pkt_out++;
+		    //ret = write_pkt(pkts[k], in_stream,out_stream, 0, livep->output, 1);
+		    ret = write_pkt(pkts[k], in_stream, out_stream, 0, livep->output_video, 0);
+		    if(ret<0){
+			av_log(NULL,AV_LOG_ERROR,"error occured while video write 1 pkt\n");
+			goto end;
+		    }
+		}
+	    }	
+	}
 //	/*audio*/
 //	else if(pkt->stream_index == livep->rtmp_index_audio){
 //            av_log(NULL,AV_LOG_INFO,"read audio packet index: %d\n", livep->audio->cur_index_pkt_in++);
@@ -98,8 +158,9 @@ int main( int argc, char **argv){
 //            }
 //	}
 //
-//	if(livep->video->cur_index_pkt_in == 500)    break;
-//    }
+
+	if(livep->video->cur_index_pkt_in == 500)    break;
+    }
  
  end:
     avformat_close_input(&livep->input_rtmp->fmt_ctx);

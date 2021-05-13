@@ -34,6 +34,7 @@ int write_pkt(AVPacket *pkt,
 	    AVStream *in_stream,AVStream *out_stream,
 	    int stream_index,fileMap *fm,int TransOrNot);
 int set_decodec(fileMap *input_fm, codecMap *cm,int stream_id);
+int set_pts(AVPacket *pkt,AVStream *stream, int pkt_index);
 
 //void init_streamMap(streamMap * sm);
 //void free_streamMap(streamMap * sm);

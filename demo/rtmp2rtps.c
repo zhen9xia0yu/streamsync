@@ -29,7 +29,7 @@ int main( int argc, char **argv){
     	return -1;
     }	
     //init
-    av_log_set_level(AV_LOG_DEBUG);
+    av_log_set_level(AV_LOG_INFO);
     av_register_all();
     avformat_network_init();
     LivePro *livep;
@@ -84,6 +84,14 @@ int main( int argc, char **argv){
     AVStream	    *in_stream;
     AVStream 	    *out_stream;
 
+    /*reay to delay*/
+    int64_t start_time = 0;
+    start_time = av_gettime();
+    AVRational time_base;
+    AVRational time_base_q = {1, AV_TIME_BASE};
+    int64_t pts_time;
+    int64_t now_time;
+
     while(1){
 	//read data
 	av_packet_unref(pkt);
@@ -137,7 +145,19 @@ int main( int argc, char **argv){
 		    av_log(NULL,AV_LOG_INFO,"video: the output packet index: %d ", livep->video->cur_index_pkt_out);
 		    livep->video->cur_index_pkt_out++;
 		    //ret = write_pkt(pkts[k], in_stream,out_stream, 0, livep->output, 1);
-		    ret = write_pkt(pkts[k], in_stream, out_stream, 0, livep->output_video, 0);
+
+		    //delay part
+		    //time_base = ifmt_ctx->streams[livep->rtmp_index_video]->time_base;
+		    //time_base = ifmt_ctx->streams[livep->rtmp_index_video]->time_base;
+		    time_base = out_stream->time_base;
+		    pts_time = av_rescale_q(pkts[k]->pts, time_base, time_base_q);
+		    now_time = av_gettime() - start_time;
+//		    if(pts_time > now_time){
+//			av_usleep(pts_time - now_time);
+//			av_log(NULL,AV_LOG_INFO,"delay.\n");
+//		    }
+
+		    ret = write_pkt(pkts[k], in_stream, out_stream, 0, livep->output_video, 1);
 		    if(ret<0){
 			av_log(NULL,AV_LOG_ERROR,"error occured while video write 1 pkt\n");
 			goto end;
@@ -159,7 +179,7 @@ int main( int argc, char **argv){
 //	}
 //
 
-	if(livep->video->cur_index_pkt_in == 500)    break;
+	//if(livep->video->cur_index_pkt_in == 500)    break;
     }
  
  end:

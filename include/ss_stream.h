@@ -27,24 +27,32 @@ typedef struct
     int64_t cur_pts;
 }   streamMap;
 
-void init_streamMap(streamMap * sm);
+
+void init_streamMap(streamMap *sm);
 void free_streamMap(streamMap * sm);
-void init_packet(AVPacket *packet);
-int init_filters(streamMap * stream);
-int set_decoder(streamMap * sm,int stream_id);
-int set_pts(AVPacket *pkt,AVStream *stream, int pkt_index);
-int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,
-                int stream_index,fileMap *fm,int TransOrNot);
-int transcode_filt(AVPacket pkt, AVPacket *new_pkt,
-                AVStream *in_stream,AVStream *out_stream,
-                int pkt_index,AVCodecContext *codec,AVCodecContext *decodec,
-                AVFrame *frame,AVFrame *filt_frame,
-                AVFilterContext *buffersrc_ctx,AVFilterContext *buffersink_ctx,
-                int type);
-int transcode_unfilt(AVPacket pkt, AVPacket *new_pkt,
-                AVStream *in_stream,AVStream *out_stream,
-                int pkt_index,AVCodecContext *codec,
-                AVCodecContext *decodec, AVFrame *frame,
-                int type);
+int write_pkt(AVPacket *pkt,
+	    AVStream *in_stream,AVStream *out_stream,
+	    int stream_index,fileMap *fm,int TransOrNot);
+int set_decodec(fileMap *input_fm, codecMap *cm,int stream_id);
+
+//void init_streamMap(streamMap * sm);
+//void free_streamMap(streamMap * sm);
+//void init_packet(AVPacket *packet);
+//int init_filters(streamMap * stream);
+//int set_decoder(streamMap * sm,int stream_id);
+//int set_pts(AVPacket *pkt,AVStream *stream, int pkt_index);
+//int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,
+//                int stream_index,fileMap *fm,int TransOrNot);
+//int transcode_filt(AVPacket pkt, AVPacket *new_pkt,
+//                AVStream *in_stream,AVStream *out_stream,
+//                int pkt_index,AVCodecContext *codec,AVCodecContext *decodec,
+//                AVFrame *frame,AVFrame *filt_frame,
+//                AVFilterContext *buffersrc_ctx,AVFilterContext *buffersink_ctx,
+//                int type);
+//int transcode_unfilt(AVPacket pkt, AVPacket *new_pkt,
+//                AVStream *in_stream,AVStream *out_stream,
+//                int pkt_index,AVCodecContext *codec,
+//                AVCodecContext *decodec, AVFrame *frame,
+//                int type);
 
 #endif

@@ -23,9 +23,21 @@ int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,int stream_
     }
     return 0;
 }
-
-
-
+int set_decodec(fileMap *input_fm, codecMap *cm,int stream_id){
+   cm->dec = avcodec_find_decoder(input_fm->fmt_ctx->streams[stream_id]->codec->codec_id);
+   if(!cm->dec){
+       av_log(NULL,AV_LOG_ERROR,"could not find decodec for '%s'\n",avcodec_get_name(input_fm->fmt_ctx->streams[stream_id]->codec->codec_id));
+       return -1;
+   }
+   cm->dec_ctx = avcodec_alloc_context3(cm->dec);
+   cm->dec_ctx->thread_count=1;
+   avcodec_copy_context(cm->dec_ctx,input_fm->fmt_ctx->streams[stream_id]->codec);
+   if(avcodec_open2(cm->dec_ctx,NULL,NULL)<0){
+       av_log(NULL,AV_LOG_ERROR,"could not open the codec '%s'\n",avcodec_get_name(input_fm->fmt_ctx->streams[stream_id]->codec->codec_id));
+       return -1;
+    }else   av_log(NULL,AV_LOG_DEBUG,"seccessed open the decoder '%s'\n",avcodec_get_name(input_fm->fmt_ctx->streams[stream_id]->codec->codec_id));
+   return 0;
+}
 //void init_streamMap(streamMap * sm){
 //    sm->input_fm = (fileMap *) calloc(1,sizeof(fileMap));
 //    sm->codecmap = (codecMap *) calloc(1,sizeof(codecMap));
@@ -190,24 +202,6 @@ int write_pkt(AVPacket *pkt,AVStream *in_stream,AVStream *out_stream,int stream_
 //    if(type)
 //        av_buffersink_set_frame_size(stream->filtermap->buffersink_ctx,1024);
 //    return 0;
-//}
-//
-//int set_decoder(streamMap * sm,int stream_id){
-//   fileMap *fm=sm->input_fm;
-//   codecMap *cm=sm->codecmap;
-//   cm->dec = avcodec_find_decoder(fm->fmt_ctx->streams[stream_id]->codec->codec_id);
-//   if(!cm->dec){
-//       av_log(NULL,AV_LOG_ERROR,"could not find decodec for '%s'\n",avcodec_get_name(fm->fmt_ctx->streams[stream_id]->codec->codec_id));
-//       return -1;
-//   }
-//   cm->dec_ctx = avcodec_alloc_context3(cm->dec);
-//   cm->dec_ctx->thread_count=1;
-//   avcodec_copy_context(cm->dec_ctx,fm->fmt_ctx->streams[stream_id]->codec);
-//   if(avcodec_open2(cm->dec_ctx,NULL,NULL)<0){
-//       av_log(NULL,AV_LOG_ERROR,"could not open the codec '%s'\n",avcodec_get_name(fm->fmt_ctx->streams[stream_id]->codec->codec_id));
-//       return -1;
-//    }else   av_log(NULL,AV_LOG_DEBUG,"seccessed open the decoder '%s'\n",avcodec_get_name(fm->fmt_ctx->streams[stream_id]->codec->codec_id));
-//   return 0;
 //}
 //
 //int set_pts(AVPacket *pkt,AVStream *stream, int pkt_index){

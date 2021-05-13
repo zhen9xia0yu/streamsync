@@ -51,47 +51,55 @@ int main( int argc, char **argv){
         av_log(NULL,AV_LOG_ERROR,"error occred while set inputs.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set inputs\n");
-    //set outputs & copy streams
+    //set outputs && encodecs
     if((ret = set_outputs(livep,VIDEO_STREAM_NEW))<0){
         av_log(NULL,AV_LOG_ERROR,"error occred while set outputs.\n");
         goto end;
     }else   av_log(NULL,AV_LOG_DEBUG,"successed set outputs.\n");
-    //read data
-    AVFormatContext *ifmt_ctx = livep->input_rtmp->fmt_ctx;
-    AVPacket *pkt = av_packet_alloc();
-    AVStream *in_stream;
-    AVStream *out_stream;
-    while(1){
-	if((ret = av_read_frame(ifmt_ctx,pkt))<0){
-	    av_log(NULL,AV_LOG_ERROR,"av_read_frame() useless.\n");
-	    break;
-	} 
-	if(pkt->stream_index == livep->rtmp_index_video){
-            av_log(NULL,AV_LOG_INFO,"read video packet index: %d\n", livep->video->cur_index_pkt_in++);
-            av_log(NULL,AV_LOG_INFO,"read 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
-	    in_stream  = livep->input_rtmp->fmt_ctx->streams[livep->rtmp_index_video];
-            out_stream = livep->output_video->fmt_ctx->streams[0];
-            ret = write_pkt(pkt,in_stream,out_stream,0,livep->output_video,0);
-            if(ret<0){
-                av_log(NULL,AV_LOG_ERROR,"error occured while video write 1 pkt\n");
-                goto end;
-            }
-	}
-	else if(pkt->stream_index == livep->rtmp_index_audio){
-            av_log(NULL,AV_LOG_INFO,"read audio packet index: %d\n", livep->audio->cur_index_pkt_in++);
-            av_log(NULL,AV_LOG_INFO,"read 1 audio pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
-	    in_stream  = livep->input_rtmp->fmt_ctx->streams[livep->rtmp_index_audio];
-            out_stream = livep->output_audio->fmt_ctx->streams[0];
-            ret = write_pkt(pkt,in_stream,out_stream,0,livep->output_audio,0);
-            if(ret<0){
-                av_log(NULL,AV_LOG_ERROR,"error occured while audio write 1 pkt\n");
-                goto end;
-            }
-	}
-
-    if(livep->video->cur_index_pkt_in == 500)
-	break;
-    }
+    //set decodecs
+    if((ret = set_decodec(livep->input_rtmp, livep->video->codecmap, livep->rtmp_index_video))<0){
+        av_log(NULL,AV_LOG_ERROR,"error occurred when open video decodec.\n");
+        goto end;
+    }else   av_log(NULL,AV_LOG_DEBUG,"sucessed set decodec: video\n");
+ 
+//    //read data
+//    AVFormatContext *ifmt_ctx = livep->input_rtmp->fmt_ctx;
+//    AVPacket *pkt = av_packet_alloc();
+//    AVStream *in_stream;
+//    AVStream *out_stream;
+//
+//    while(1){
+//	if((ret = av_read_frame(ifmt_ctx,pkt))<0){
+//	    av_log(NULL,AV_LOG_ERROR,"av_read_frame() useless.\n");
+//	    break;
+//	} 
+//	/*video*/
+//	if(pkt->stream_index == livep->rtmp_index_video){
+//            av_log(NULL,AV_LOG_INFO,"read video packet index: %d\n", livep->video->cur_index_pkt_in++);
+//            av_log(NULL,AV_LOG_INFO,"read 1 video pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
+//	    in_stream  = livep->input_rtmp->fmt_ctx->streams[livep->rtmp_index_video];
+//            out_stream = livep->output_video->fmt_ctx->streams[0];
+//            ret = write_pkt(pkt,in_stream,out_stream,0,livep->output_video,0);
+//            if(ret<0){
+//                av_log(NULL,AV_LOG_ERROR,"error occured while video write 1 pkt\n");
+//                goto end;
+//            }
+//	}
+//	/*audio*/
+//	else if(pkt->stream_index == livep->rtmp_index_audio){
+//            av_log(NULL,AV_LOG_INFO,"read audio packet index: %d\n", livep->audio->cur_index_pkt_in++);
+//            av_log(NULL,AV_LOG_INFO,"read 1 audio pkt.pts=%"PRId64" pkt.dts=%"PRId64" pkt.duration=%"PRId64" pkt.size=%d\n",pkt->pts,pkt->dts,pkt->duration,pkt->size);
+//	    in_stream  = livep->input_rtmp->fmt_ctx->streams[livep->rtmp_index_audio];
+//            out_stream = livep->output_audio->fmt_ctx->streams[0];
+//            ret = write_pkt(pkt,in_stream,out_stream,0,livep->output_audio,0);
+//            if(ret<0){
+//                av_log(NULL,AV_LOG_ERROR,"error occured while audio write 1 pkt\n");
+//                goto end;
+//            }
+//	}
+//
+//	if(livep->video->cur_index_pkt_in == 500)    break;
+//    }
  
  end:
     avformat_close_input(&livep->input_rtmp->fmt_ctx);
